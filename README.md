@@ -22,20 +22,20 @@ Objectif de cette v1 : **remplacer la saisie manuelle dans la Google Sheet**.
 
 - [Next.js 16](https://nextjs.org) (App Router) + React 19 + TypeScript
 - [Tailwind CSS 4](https://tailwindcss.com) pour l'interface
-- [Prisma 6](https://www.prisma.io) + PostgreSQL pour les données
+- [Prisma 6](https://www.prisma.io) + [Turso](https://turso.tech) (SQLite hébergé,
+  via l'adaptateur libSQL)
 - [Recharts](https://recharts.org) pour les graphiques
 
 ## Démarrer en local
 
-Il faut une base PostgreSQL. Le plus simple et gratuit : créer une base sur
-[Neon](https://neon.tech) et copier son URL de connexion.
+Aucune base à installer : sans configuration, l'app utilise un fichier SQLite
+local (`prisma/dev.db`).
 
 ```bash
 npm install
-cp .env.example .env         # puis colle ton URL Postgres dans DATABASE_URL
-npx prisma migrate deploy    # crée les tables
-npm run seed                 # (optionnel) importe les données 2026 existantes
-npm run dev                  # démarre sur http://localhost:3000
+cp .env.example .env   # (optionnel) pour pointer vers Turso ; sinon laisse vide
+npm run seed           # crée les tables + importe les données 2026
+npm run dev            # démarre sur http://localhost:3000
 ```
 
 ## Scripts
@@ -77,20 +77,21 @@ libre (pratique en local).
 
 ## Mise en ligne sur Vercel
 
-1. **Créer une base Postgres gratuite** sur [Neon](https://neon.tech) :
-   nouveau projet → copier la *connection string* (commence par `postgresql://`).
-2. **Importer le projet dans Vercel** : « Add New… → Project » et choisir ce
-   dépôt GitHub.
-3. **Variables d'environnement** (onglet Settings → Environment Variables) :
-   - `DATABASE_URL` = l'URL Neon copiée à l'étape 1.
-   - `APP_PASSWORD` = un mot de passe de ton choix (protège l'accès en ligne).
-4. **Déployer.** Le build applique automatiquement les migrations
-   (`prisma migrate deploy`) et crée les tables.
-5. **Importer tes données 2026** (une seule fois) : en local, mets la même
-   `DATABASE_URL` dans `.env` puis lance `npm run seed`.
+1. **Créer une base Turso gratuite** (SQLite hébergé) :
+   - `curl -sSfL https://get.tur.so/install.sh | bash` puis `turso auth signup`
+   - `turso db create compta` (crée la base)
+   - `turso db show compta --url` → **TURSO_DATABASE_URL** (commence par `libsql://`)
+   - `turso db tokens create compta` → **TURSO_AUTH_TOKEN**
+2. **Préparer la base** (tables + données 2026), une seule fois, en local :
+   mets `TURSO_DATABASE_URL` et `TURSO_AUTH_TOKEN` dans `.env`, puis `npm run seed`.
+3. **Importer le projet dans Vercel** : « Add New… → Project » → ce dépôt GitHub.
+4. **Variables d'environnement** (Settings → Environment Variables) :
+   - `TURSO_DATABASE_URL` = l'URL de l'étape 1
+   - `TURSO_AUTH_TOKEN` = le token de l'étape 1
+   - `APP_PASSWORD` = un mot de passe de ton choix (protège l'accès en ligne)
+5. **Déployer.**
 
-> La même base Neon peut servir en local et en ligne : tu as ainsi les mêmes
-> données partout.
+> La même base Turso sert en local et en ligne : mêmes données partout.
 
 ## Prochaines étapes (roadmap)
 

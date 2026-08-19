@@ -1,8 +1,13 @@
-// Import des données existantes de la Google Sheet (année 2026).
+// Prépare la base et importe les données existantes de la Google Sheet (2026).
+// Fonctionne aussi bien sur Turso (en ligne) que sur le fichier SQLite local.
 // Lancer avec : npm run seed
+import { readFileSync } from "node:fs";
+import { createClient } from "@libsql/client";
 import { PrismaClient } from "@prisma/client";
+import { PrismaLibSQL } from "@prisma/adapter-libsql";
 
-const prisma = new PrismaClient();
+const url = process.env.TURSO_DATABASE_URL ?? "file:./prisma/dev.db";
+const authToken = process.env.TURSO_AUTH_TOKEN;
 
 const dayKey = (year, month, day) => new Date(Date.UTC(year, month - 1, day));
 
@@ -27,8 +32,7 @@ const july = [
   [31, 3, 119.0, 81.0, 56.83],
 ];
 
-// Août 2026 (onglet "Aout" — les dates y étaient mal recopiées en 07,
-// on les rétablit en août 01 → 18).
+// Août 2026 (onglet "Aout" — dates mal recopiées en 07, rétablies en août).
 const august = [
   [1, 5, 229.94, 95.0, 109.0],
   [2, 5, 202.0, 61.73, 94.6],
@@ -50,7 +54,19 @@ const august = [
   [18, 1, 42.89, 34.58, 18.92],
 ];
 
-async function importMonth(year, month, rows) {
+// 1) Crée les tables si elles n'existent pas (à partir de la migration).
+async function ensureTables() {
+  const raw = createClient({ url, authToken });
+  const sql = readFileSync(
+    new URL("./migrations/0_init/migration.sql", import.meta.url),
+    "utf8",
+  ).replace(/CREATE TABLE /g, "CREATE TABLE IF NOT EXISTS ")
+    .replace(/CREATE UNIQUE INDEX /g, "CREATE UNIQUE INDEX IF NOT EXISTS ");
+  await raw.executeMultiple(sql);
+  raw.close();
+}
+
+async function importMonth(prisma, year, month, rows) {
   for (const [day, ordersCount, revenue, tiktokSpend, purchaseCost] of rows) {
     const date = dayKey(year, month, day);
     const data = { ordersCount, revenue, tiktokSpend, purchaseCost };
@@ -63,25 +79,34 @@ async function importMonth(year, month, rows) {
 }
 
 async function main() {
-  for (const p of products) {
-    await prisma.product.upsert({
-      where: { name: p.name },
-      create: p,
-      update: { costPrice: p.costPrice },
-    });
-  }
-  await importMonth(2026, 7, july);
-  await importMonth(2026, 8, august);
+  await ensureTables();
 
-  const count = await prisma.dailyEntry.count();
-  console.log(
-    `✅ Import terminé : ${products.length} produits, ${count} journées.`,
-  );
+  const prisma = new PrismaClient({
+    adapter: new PrismaLibSQL({ url, authToken }),
+  });
+
+  try {
+    for (const p of products) {
+      await prisma.product.upsert({
+        where: { name: p.name },
+        create: p,
+        update: { costPrice: p.costPrice },
+      });
+    }
+    await importMonth(prisma, 2026, 7, july);
+    await importMonth(prisma, 2026, 8, august);
+
+    const count = await prisma.dailyEntry.count();
+    const target = process.env.TURSO_DATABASE_URL ? "Turso (en ligne)" : "local";
+    console.log(
+      `✅ Base prête (${target}) : ${products.length} produits, ${count} journées.`,
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

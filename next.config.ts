@@ -6,6 +6,13 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  // Paquets à ne pas bundler côté serveur (bindings natifs de libSQL/Prisma).
+  serverExternalPackages: [
+    "@prisma/client",
+    "@prisma/adapter-libsql",
+    "@libsql/client",
+    "libsql",
+  ],
 };
 
 export default nextConfig;

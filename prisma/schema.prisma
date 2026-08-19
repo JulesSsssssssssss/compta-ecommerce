@@ -8,8 +8,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  // URL "de secours" utilisée uniquement par les commandes Prisma en local.
+  // En vrai, la connexion se fait via l'adaptateur libSQL (Turso) — voir
+  // lib/prisma.ts — avec les variables TURSO_DATABASE_URL / TURSO_AUTH_TOKEN.
+  url      = "file:./dev.db"
 }
 
 /// Catalogue produit : un article vendu avec son prix d'achat (coût).
