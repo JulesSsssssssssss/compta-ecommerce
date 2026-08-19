@@ -1,0 +1,54 @@
+// Schéma de la base de données — Compta e-commerce
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  // "native" pour le local, "rhel-openssl-3.0.x" pour l'environnement Vercel.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Catalogue produit : un article vendu avec son prix d'achat (coût).
+model Product {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  costPrice Float // Prix d'achat unitaire (€)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items DailyEntryItem[]
+}
+
+/// Saisie d'une journée : les champs saisis manuellement.
+/// Les indicateurs (marge, ROAS, prix moyens) sont calculés à la volée.
+model DailyEntry {
+  id           String   @id @default(cuid())
+  date         DateTime @unique // Jour concerné (à minuit UTC)
+  ordersCount  Int      @default(0) // Nombre de commandes
+  revenue      Float    @default(0) // CA du jour (€)
+  tiktokSpend  Float    @default(0) // Dépense publicitaire TikTok (€)
+  purchaseCost Float    @default(0) // Coût d'achat total des produits vendus (€)
+  note         String? // Commentaire libre optionnel
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items DailyEntryItem[]
+}
+
+/// Détail optionnel : quels produits ont été vendus ce jour (quantité).
+/// Si présent, la somme (quantité × prix d'achat) alimente purchaseCost.
+model DailyEntryItem {
+  id        String     @id @default(cuid())
+  entry     DailyEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entryId   String
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productId String
+  quantity  Int        @default(1)
+
+  @@unique([entryId, productId])
+}

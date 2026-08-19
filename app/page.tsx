@@ -1,69 +1,168 @@
-import Image from "next/image";
+import Link from "next/link";
+import { getYearRecap, getAvailableYears } from "@/lib/data";
+import {
+  formatEuro,
+  formatPercent,
+  formatRoas,
+  monthLabel,
+  MONTHS_FR,
+} from "@/lib/format";
+import { Card, StatCard, signTone } from "./components/ui";
+import { RevenueByMonthChart, MarginByMonthChart } from "./components/Charts";
+import { YearSelector } from "./components/YearSelector";
 
-export default function Home() {
+export default async function DashboardPage({ searchParams }: PageProps<"/">) {
+  const params = await searchParams;
+  const years = await getAvailableYears();
+  const yearParam = Number(
+    Array.isArray(params.year) ? params.year[0] : params.year,
+  );
+  const year = years.includes(yearParam) ? yearParam : years[0];
+
+  const { months, total } = await getYearRecap(year);
+
+  const chartData = months.map((m) => ({
+    label: MONTHS_FR[m.month - 1].slice(0, 3),
+    revenue: Math.round(m.revenue),
+    margin: Math.round(m.margin),
+  }));
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Tableau de bord</h1>
+          <p className="text-sm text-slate-500">Récapitulatif annuel {year}</p>
+        </div>
+        <YearSelector years={years} current={year} />
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="Chiffre d'affaires"
+          value={formatEuro(total.revenue)}
+          tone="brand"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+        <StatCard
+          label="Bénéfice net"
+          value={formatEuro(total.margin)}
+          tone={total.margin >= 0 ? "positive" : "negative"}
+          hint={`Marge ${formatPercent(total.marginRate)}`}
+        />
+        <StatCard label="Dépense TikTok" value={formatEuro(total.tiktokSpend)} />
+        <StatCard
+          label="Commandes"
+          value={String(total.ordersCount)}
+          hint={`ROAS ${formatRoas(total.roas)}`}
+        />
+      </div>
+
+      {/* Graphiques */}
+      <div className="grid lg:grid-cols-2 gap-4">
+        <Card className="p-5">
+          <h2 className="text-sm font-semibold text-slate-700 mb-3">
+            Chiffre d&apos;affaires par mois
+          </h2>
+          <RevenueByMonthChart data={chartData} />
+        </Card>
+        <Card className="p-5">
+          <h2 className="text-sm font-semibold text-slate-700 mb-3">
+            Bénéfice net par mois
+          </h2>
+          <MarginByMonthChart data={chartData} />
+        </Card>
+      </div>
+
+      {/* Tableau récapitulatif */}
+      <Card className="overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100">
+          <h2 className="text-sm font-semibold text-slate-700">
+            Détail par mois
+          </h2>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wide text-slate-500 bg-slate-50">
+                <th className="px-4 py-3 font-medium">Mois</th>
+                <th className="px-4 py-3 font-medium text-right">Commandes</th>
+                <th className="px-4 py-3 font-medium text-right">CA</th>
+                <th className="px-4 py-3 font-medium text-right">Dépense TikTok</th>
+                <th className="px-4 py-3 font-medium text-right">Marge %</th>
+                <th className="px-4 py-3 font-medium text-right">Bénéfice net</th>
+                <th className="px-4 py-3 font-medium text-right">ROAS</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {months.map((m) => (
+                <tr key={m.month} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-medium">{monthLabel(m.month)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">
+                    {m.ordersCount}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums">
+                    {formatEuro(m.revenue)}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-slate-500">
+                    {formatEuro(m.tiktokSpend)}
+                  </td>
+                  <td
+                    className={`px-4 py-3 text-right tabular-nums ${signTone(m.margin)}`}
+                  >
+                    {m.revenue > 0 ? formatPercent(m.marginRate) : "—"}
+                  </td>
+                  <td
+                    className={`px-4 py-3 text-right tabular-nums font-medium ${signTone(m.margin)}`}
+                  >
+                    {formatEuro(m.margin)}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-slate-500">
+                    {m.tiktokSpend > 0 ? formatRoas(m.roas) : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Link
+                      href={`/mois/${year}/${m.month}`}
+                      className="text-brand-600 hover:text-brand-700 text-xs font-medium"
+                    >
+                      Ouvrir →
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="bg-slate-50 font-semibold border-t-2 border-slate-200">
+                <td className="px-4 py-3">Total {year}</td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {total.ordersCount}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {formatEuro(total.revenue)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {formatEuro(total.tiktokSpend)}
+                </td>
+                <td
+                  className={`px-4 py-3 text-right tabular-nums ${signTone(total.margin)}`}
+                >
+                  {formatPercent(total.marginRate)}
+                </td>
+                <td
+                  className={`px-4 py-3 text-right tabular-nums ${signTone(total.margin)}`}
+                >
+                  {formatEuro(total.margin)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {formatRoas(total.roas)}
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
-      </main>
+      </Card>
     </div>
   );
 }
