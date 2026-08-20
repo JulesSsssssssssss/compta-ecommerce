@@ -10,6 +10,8 @@ import {
 import { Card, StatCard } from "@/app/components/ui";
 import { MonthTable, type DayCell } from "@/app/components/MonthTable";
 import { DailyTrendChart } from "@/app/components/Charts";
+import { ShopifySync } from "@/app/components/ShopifySync";
+import { shopifyConfigured } from "@/lib/shopify";
 
 export default async function MonthPage({
   params,
@@ -110,13 +112,16 @@ export default async function MonthPage({
       )}
 
       <Card className="overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-700">
-            Suivi jour par jour
-          </h2>
-          <p className="text-xs text-slate-400">
-            Clique sur « Saisir » ou « Modifier » pour renseigner un jour
-          </p>
+        <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-700">
+              Suivi jour par jour
+            </h2>
+            <p className="text-xs text-slate-400">
+              Commandes et CA depuis Shopify · TikTok et coûts à renseigner
+            </p>
+          </div>
+          <ShopifySync year={year} month={month} configured={shopifyConfigured()} />
         </div>
         <MonthTable
           year={year}

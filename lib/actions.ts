@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "./prisma";
 import { dayKey } from "./format";
+import { fetchShopifyMonth, shopifyConfigured } from "./shopify";
 
 // ---- Utilitaires de parsing (tolère "12,50" ou "12.50", champs vides) ----
 
@@ -133,4 +134,71 @@ export async function deleteProduct(formData: FormData) {
   if (!id) return;
   await prisma.product.delete({ where: { id } }).catch(() => {});
   revalidatePath("/produits");
+}
+
+// ---- Synchronisation Shopify ----
+
+export type SyncResult = {
+  ok: boolean;
+  message: string;
+  updatedDays?: number;
+};
+
+/**
+ * Récupère depuis Shopify le nb de commandes et le CA de chaque jour du mois
+ * et met à jour les saisies. Ne touche PAS à la dépense TikTok ni au coût
+ * d'achat (gérés à part). Retourne un résumé pour l'interface.
+ */
+export async function syncShopifyMonth(
+  year: number,
+  month: number,
+): Promise<SyncResult> {
+  if (!shopifyConfigured()) {
+    return {
+      ok: false,
+      message:
+        "Shopify n'est pas encore connecté (jeton d'accès manquant côté serveur).",
+    };
+  }
+
+  let byDay: Map<number, { ordersCount: number; revenue: number }>;
+  try {
+    byDay = await fetchShopifyMonth(year, month);
+  } catch (e) {
+    return {
+      ok: false,
+      message: `Erreur Shopify : ${e instanceof Error ? e.message : "inconnue"}`,
+    };
+  }
+
+  let updatedDays = 0;
+  for (const [day, agg] of byDay) {
+    const date = dayKey(year, month, day);
+    await prisma.dailyEntry.upsert({
+      where: { date },
+      create: {
+        date,
+        ordersCount: agg.ordersCount,
+        revenue: agg.revenue,
+      },
+      // On ne met à jour que le CA et les commandes.
+      update: {
+        ordersCount: agg.ordersCount,
+        revenue: agg.revenue,
+      },
+    });
+    updatedDays += 1;
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/mois/${year}/${month}`);
+
+  return {
+    ok: true,
+    updatedDays,
+    message:
+      updatedDays > 0
+        ? `Synchronisation réussie : ${updatedDays} jour${updatedDays > 1 ? "s" : ""} mis à jour depuis Shopify.`
+        : "Aucune commande Shopify trouvée pour ce mois.",
+  };
 }
