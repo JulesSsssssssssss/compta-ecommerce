@@ -1,24 +1,84 @@
 // Intégration Shopify : récupère les commandes et le CA jour par jour via
 // l'API Admin GraphQL, pour remplir automatiquement les saisies quotidiennes.
 
-const API_VERSION = "2025-01";
+const API_VERSION = "2026-07";
 const SHOP_TIMEZONE = "Europe/Paris"; // fuseau de la boutique (CEST/CET)
 
 export type DailyAgg = { ordersCount: number; revenue: number };
 
 export function shopifyConfigured(): boolean {
+  if (!process.env.SHOPIFY_STORE_DOMAIN) return false;
+  // Deux modes d'authentification possibles (voir getAccessToken).
   return Boolean(
-    process.env.SHOPIFY_STORE_DOMAIN && process.env.SHOPIFY_ADMIN_TOKEN,
+    process.env.SHOPIFY_ADMIN_TOKEN ||
+      (process.env.SHOPIFY_CLIENT_ID && process.env.SHOPIFY_CLIENT_SECRET),
   );
+}
+
+// Jeton obtenu par « client credentials », valable 24 h. On le garde en mémoire
+// et on le renouvelle une minute avant l'échéance plutôt qu'à chaque appel.
+let cachedToken: { value: string; expiresAt: number } | null = null;
+
+/**
+ * Renvoie un jeton d'accès Admin API.
+ *
+ * - Si SHOPIFY_ADMIN_TOKEN est défini (ancienne app créée dans l'admin), on
+ *   l'utilise tel quel : c'est un jeton permanent.
+ * - Sinon on échange SHOPIFY_CLIENT_ID / SHOPIFY_CLIENT_SECRET contre un jeton
+ *   temporaire. C'est le mode « client credentials », réservé aux apps qui
+ *   agissent sur les boutiques de leur propre organisation Shopify.
+ */
+async function getAccessToken(domain: string): Promise<string> {
+  const staticToken = process.env.SHOPIFY_ADMIN_TOKEN;
+  if (staticToken) return staticToken;
+
+  if (cachedToken && Date.now() < cachedToken.expiresAt) return cachedToken.value;
+
+  const clientId = process.env.SHOPIFY_CLIENT_ID;
+  const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) throw new Error("Shopify non configuré");
+
+  const res = await fetch(`https://${domain}/admin/oauth/access_token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: clientId,
+      client_secret: clientSecret,
+    }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(
+      `Authentification Shopify ${res.status} : ${body.slice(0, 300)}`,
+    );
+  }
+
+  const { access_token, expires_in } = (await res.json()) as {
+    access_token: string;
+    expires_in: number;
+  };
+  cachedToken = {
+    value: access_token,
+    expiresAt: Date.now() + (expires_in - 60) * 1000,
+  };
+  return access_token;
 }
 
 type OrderNode = {
   createdAt: string;
   test: boolean;
   cancelledAt: string | null;
+  subtotalLineItemsQuantity: number;
   totalPriceSet: { shopMoney: { amount: string } };
 };
 
+// `subtotalLineItemsQuantity` est le nombre d'articles de la commande (une
+// commande de 2 pièces compte pour 2). On garde la variante « d'origine »
+// plutôt que `currentSubtotalLineItemsQuantity` pour rester cohérent avec
+// `totalPriceSet`, qui est lui aussi le montant d'origine, hors retours.
 const ORDERS_QUERY = `
   query Orders($cursor: String, $q: String!) {
     orders(first: 100, after: $cursor, query: $q, sortKey: CREATED_AT) {
@@ -27,6 +87,7 @@ const ORDERS_QUERY = `
         createdAt
         test
         cancelledAt
+        subtotalLineItemsQuantity
         totalPriceSet { shopMoney { amount } }
       }
     }
@@ -47,8 +108,8 @@ function toShopDate(iso: string): { y: number; m: number; d: number } {
 
 async function shopifyGraphQL<T>(query: string, variables: object): Promise<T> {
   const domain = process.env.SHOPIFY_STORE_DOMAIN;
-  const token = process.env.SHOPIFY_ADMIN_TOKEN;
-  if (!domain || !token) throw new Error("Shopify non configuré");
+  if (!domain) throw new Error("Shopify non configuré");
+  const token = await getAccessToken(domain);
 
   const res = await fetch(
     `https://${domain}/admin/api/${API_VERSION}/graphql.json`,
@@ -104,11 +165,15 @@ export async function fetchShopifyMonth(
 
     for (const o of data.orders.nodes) {
       if (o.test) continue; // ignore les commandes de test
+      if (o.cancelledAt) continue; // ignore les commandes annulées
       const { y, m, d } = toShopDate(o.createdAt);
       if (y !== year || m !== month) continue; // hors du mois local
       const amount = Number(o.totalPriceSet?.shopMoney?.amount ?? 0);
       const agg = result.get(d) ?? { ordersCount: 0, revenue: 0 };
-      agg.ordersCount += 1;
+      // On compte les articles vendus, pas les commandes : le catalogue donne
+      // un prix d'achat par article, donc « coût / compteur » n'a de sens que
+      // si le compteur compte des articles.
+      agg.ordersCount += o.subtotalLineItemsQuantity ?? 1;
       agg.revenue += amount;
       result.set(d, agg);
     }

@@ -75,6 +75,42 @@ Définir `APP_PASSWORD` dans `.env` (ou dans les variables d'environnement de
 l'hébergeur). Une page de connexion s'affichera alors. Laisser vide = accès
 libre (pratique en local).
 
+## Connecter Shopify
+
+Le bouton « ↻ Synchroniser depuis Shopify » (pages mois) récupère le nombre de
+commandes et le CA jour par jour. Il reste grisé tant que les deux variables
+ci-dessous ne sont pas définies.
+
+> Shopify ne permet plus de créer les anciennes « applications personnalisées »
+> depuis l'admin (celles qui fournissaient un jeton `shpat_` permanent). Les
+> nouvelles apps se créent dans le **Dev Dashboard**, et l'app s'authentifie en
+> échangeant ses identifiants contre un jeton temporaire.
+
+1. Sur [dev.shopify.com](https://dev.shopify.com), créer une app (nom libre,
+   ex. « Compta ») dans l'organisation **qui contient la boutique**.
+2. Déclarer les portées **`read_orders`** (+ **`read_all_orders`** pour
+   l'historique au-delà de 60 jours), puis publier une version de l'app et
+   approuver l'accès sur la boutique.
+3. Récupérer le **client ID** et le **client secret** de l'app.
+4. Renseigner dans `.env` (et dans Vercel pour la mise en ligne) :
+   - `SHOPIFY_STORE_DOMAIN` = le domaine technique `xxxxxx-xx.myshopify.com`
+     (pas le domaine public de la boutique)
+   - `SHOPIFY_CLIENT_ID` et `SHOPIFY_CLIENT_SECRET` = l'étape 3
+5. Redémarrer `npm run dev` (les variables d'environnement sont lues au démarrage).
+
+L'app échange ces identifiants contre un jeton d'accès valable 24 h
+(`client_credentials`), qu'elle garde en cache et renouvelle toute seule — voir
+`getAccessToken()` dans `lib/shopify.ts`. Ce mode ne fonctionne que si l'app et
+la boutique sont dans la **même organisation Shopify** ; sinon Shopify répond
+`shop_not_permitted`.
+
+Si tu maintiens une ancienne app de l'admin avec un jeton `shpat_` permanent,
+renseigne `SHOPIFY_ADMIN_TOKEN` à la place : il prend le pas sur le reste.
+
+La synchronisation n'écrase que **le CA et le nombre de commandes** : la dépense
+TikTok et le coût d'achat saisis à la main sont conservés. Les commandes de test
+et les commandes annulées sont ignorées.
+
 ## Mise en ligne sur Vercel
 
 1. **Créer une base Turso gratuite** (SQLite hébergé) :
@@ -89,6 +125,7 @@ libre (pratique en local).
    - `TURSO_DATABASE_URL` = l'URL de l'étape 1
    - `TURSO_AUTH_TOKEN` = le token de l'étape 1
    - `APP_PASSWORD` = un mot de passe de ton choix (protège l'accès en ligne)
+   - `SHOPIFY_STORE_DOMAIN` et `SHOPIFY_ADMIN_TOKEN` (voir « Connecter Shopify »)
 5. **Déployer.**
 
 > La même base Turso sert en local et en ligne : mêmes données partout.

@@ -32,6 +32,11 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...sauf le modèle, qui documente les variables attendues (aucun secret dedans).
+!.env.example
+
+# Sauvegardes ponctuelles de la base avant synchronisation.
+backup-*.json
 
 # vercel
 .vercel
