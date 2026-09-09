@@ -106,7 +106,14 @@ export default function RadarPage() {
   const ok = sites.filter((s) => !s.error);
   const strong = ok.flatMap((s) => (s.strong ?? []).map((r) => ({ r, s })));
   const watch = ok.flatMap((s) => (s.watch ?? []).map((r) => ({ r, s })));
-  const fresh = ok.flatMap((s) => (s.fresh ?? []).map((r) => ({ r, s })));
+  // Tri global : ce qui vend deja passe devant, tous sites confondus.
+  const fresh = ok
+    .flatMap((s) => (s.fresh ?? []).map((r) => ({ r, s })))
+    .sort(
+      (a, b) =>
+        Number(Boolean(b.r.selling)) - Number(Boolean(a.r.selling)) ||
+        (a.r.selling ? a.r.rank - b.r.rank : a.r.age_days - b.r.age_days),
+    );
   const scanned = ok.reduce((n, s) => n + (s.n_products ?? 0), 0);
   const movers = ok.flatMap((s) => [
     ...(s.movements?.first_sale ?? []).map((m) => ({ m, s, kind: "first" as const })),
@@ -114,7 +121,7 @@ export default function RadarPage() {
   ]);
 
   return (
-    <div className="space-y-6 sm:space-y-8 max-w-3xl">
+    <div className="space-y-6 sm:space-y-8">
       <div>
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
           Radar concurrents
@@ -139,6 +146,69 @@ export default function RadarPage() {
         />
         <StatCard label="Produits analysés" value={String(scanned)} />
       </div>
+
+      {/* ---- Ce qui vient de sortir chez les concurrents, et son statut ---- */}
+      {fresh.length > 0 && (
+        <Card className="overflow-hidden">
+          <SectionTitle
+            title="Nouveautés des concurrents"
+            subtitle="En ligne depuis moins de 7 jours — celles qui vendent déjà sont en tête"
+          />
+          <ul className="divide-y divide-slate-200">
+            {fresh.map(({ r, s }) => (
+              <li
+                key={s.domain + r.handle}
+                className="px-4 sm:px-5 py-3 flex items-center gap-3 sm:gap-4"
+              >
+                {r.selling ? (
+                  <Rank n={r.rank} />
+                ) : (
+                  <span className="grid place-items-center w-8 h-8 shrink-0 rounded-lg border border-dashed border-slate-300 text-slate-300 text-xs">
+                    —
+                  </span>
+                )}
+
+                {/* Titre : prend toute la largeur disponible */}
+                <a
+                  href={r.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-slate-900 hover:text-indigo-600 hover:underline flex-1 min-w-0 truncate"
+                >
+                  {r.title}
+                </a>
+
+                {/* Colonnes fixes, alignées d'une ligne à l'autre */}
+                <span className="hidden md:block w-44 shrink-0 truncate text-xs text-slate-400">
+                  {s.domain}
+                </span>
+                <span className="hidden sm:block w-20 shrink-0 text-xs text-slate-400 tabular-nums">
+                  {jours(r.age_days)}
+                </span>
+                <span className="w-32 sm:w-36 shrink-0 text-right sm:text-left">
+                  {r.selling ? (
+                    <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium whitespace-nowrap">
+                      déjà {r.rank}
+                      <sup>{r.rank === 1 ? "er" : "e"}</sup> des ventes
+                    </span>
+                  ) : r.selling === null ? (
+                    <span className="inline-block px-2 py-0.5 rounded-full bg-slate-50 text-slate-400 text-xs whitespace-nowrap">
+                      non mesurable
+                    </span>
+                  ) : (
+                    <span className="inline-block px-2 py-0.5 rounded-full bg-slate-50 text-slate-400 text-xs whitespace-nowrap">
+                      pas encore de vente
+                    </span>
+                  )}
+                </span>
+                <span className="hidden sm:block w-20 shrink-0 text-sm tabular-nums text-slate-700 text-right">
+                  {euro(r.price)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {/* ---- Le cœur du rapport ---- */}
       <Card className="overflow-hidden">
@@ -197,59 +267,6 @@ export default function RadarPage() {
           <ul className="divide-y divide-slate-200">
             {watch.map(({ r, s }) => (
               <ProductRow key={s.domain + r.handle} r={r} domain={s.domain} />
-            ))}
-          </ul>
-        </Card>
-      )}
-
-      {fresh.length > 0 && (
-        <Card className="overflow-hidden">
-          <SectionTitle
-            title="Nouveautés des concurrents"
-            subtitle="En ligne depuis moins de 7 jours — celles qui vendent déjà sont en tête"
-          />
-          <ul className="divide-y divide-slate-200">
-            {fresh.map(({ r, s }) => (
-              <li
-                key={s.domain + r.handle}
-                className="px-4 sm:px-5 py-3 flex items-center gap-3"
-              >
-                {r.selling ? (
-                  <Rank n={r.rank} />
-                ) : (
-                  <span className="grid place-items-center w-8 h-8 shrink-0 rounded-lg border border-dashed border-slate-300 text-slate-300 text-xs">
-                    —
-                  </span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <a
-                    href={r.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-medium text-slate-900 hover:text-indigo-600 hover:underline block truncate"
-                  >
-                    {r.title}
-                  </a>
-                  <p className="text-xs mt-0.5 truncate">
-                    <span className="text-slate-400">
-                      {s.domain} · il y a {jours(r.age_days)} ·{" "}
-                    </span>
-                    {r.selling ? (
-                      <span className="text-emerald-600 font-medium">
-                        déjà {r.rank}
-                        <sup>{r.rank === 1 ? "er" : "e"}</sup> des ventes
-                      </span>
-                    ) : r.selling === null ? (
-                      <span className="text-slate-400">classement non fiable</span>
-                    ) : (
-                      <span className="text-slate-400">pas encore de vente</span>
-                    )}
-                  </p>
-                </div>
-                <span className="text-sm tabular-nums text-slate-700 shrink-0">
-                  {euro(r.price)}
-                </span>
-              </li>
             ))}
           </ul>
         </Card>
