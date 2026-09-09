@@ -1,0 +1,19 @@
+# Boutiques Shopify surveillées par le radar.
+#
+# POUR AJOUTER UN SITE : édite ce fichier depuis GitHub (bouton crayon), même
+# depuis ton téléphone. Le scan de 20h récupère la liste avant de démarrer,
+# donc un ajout dans la journée est pris en compte le soir même.
+#
+# Une ligne par boutique. Colle l'URL telle quelle, sous n'importe quelle
+# forme — le domaine en est extrait automatiquement :
+#   https://www.exemple.com/products/robe-x   ->  www.exemple.com
+#   EXEMPLE.COM/                              ->  exemple.com
+# Les lignes vides et celles commençant par # sont ignorées.
+
+fr.gianoria.com
+avontti.com
+lilystrose.com
+valentina-paris.com
+audaline.com
+olyvaa.co
+nelyafashion.com
