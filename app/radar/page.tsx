@@ -1,5 +1,10 @@
 import raw from "@/data/radar.json";
 import { Card, StatCard } from "@/app/components/ui";
+import { prisma } from "@/lib/prisma";
+import { addRadarSite, removeRadarSite } from "@/lib/radar-actions";
+
+// La liste des sites vit en base : elle doit refleter l'ajout immediatement.
+export const dynamic = "force-dynamic";
 
 // Le JSON est produit en local par scan.py puis poussé dans le dépôt : la page
 // est statique et se met à jour à chaque redéploiement. Volontairement limitée
@@ -101,7 +106,15 @@ function ProductRow({ r, domain }: { r: Row; domain: string }) {
   );
 }
 
-export default function RadarPage() {
+export default async function RadarPage() {
+  const tracked = await prisma.radarSite
+    .findMany({ orderBy: { domain: "asc" } })
+    .catch(() => [] as { domain: string }[]);
+  const scannedDomains = new Set(radar.sites.map((s) => s.domain));
+  // Un site ajoute apres le dernier scan n'a pas encore de donnees.
+  const pending = tracked
+    .map((t) => t.domain)
+    .filter((d) => !scannedDomains.has(d));
   const sites = radar.sites;
   const ok = sites.filter((s) => !s.error);
   const strong = ok.flatMap((s) => (s.strong ?? []).map((r) => ({ r, s })));
@@ -274,7 +287,49 @@ export default function RadarPage() {
 
       {/* ---- Détail par site, avec la fiabilité affichée honnêtement ---- */}
       <Card className="overflow-hidden">
-        <SectionTitle title="Détail par site" />
+        <SectionTitle
+          title="Sites surveillés"
+          subtitle="Un site ajouté ici est scanné au prochain passage, ce soir à 20h"
+        />
+        <form
+          action={addRadarSite}
+          className="px-4 sm:px-5 py-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center gap-2.5 bg-slate-50/60"
+        >
+          <input
+            name="domain"
+            required
+            placeholder="Colle l'URL d'une boutique — https://exemple.com/products/robe-x"
+            className="flex-1 min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+          />
+          <button className="shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors">
+            Ajouter au radar
+          </button>
+        </form>
+        {pending.length > 0 && (
+          <ul className="divide-y divide-slate-200">
+            {pending.map((d) => (
+              <li
+                key={d}
+                className="px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 bg-indigo-50/40"
+              >
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-slate-900 truncate block">
+                    {d}
+                  </span>
+                  <span className="text-xs text-indigo-600">
+                    Ajouté — sera scanné au prochain passage
+                  </span>
+                </div>
+                <form action={removeRadarSite} className="shrink-0">
+                  <input type="hidden" name="domain" value={d} />
+                  <button className="text-xs text-slate-400 hover:text-red-600 transition-colors">
+                    Retirer
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
         <ul className="divide-y divide-slate-200">
           {sites.map((s) => (
             <li key={s.domain} className="px-4 sm:px-5 py-3.5">
@@ -287,8 +342,16 @@ export default function RadarPage() {
                 >
                   {s.domain}
                 </a>
-                <span className="text-xs tabular-nums text-slate-500 shrink-0">
-                  {s.error ? "—" : `${s.n_products} produits`}
+                <span className="flex items-baseline gap-3 shrink-0">
+                  <span className="text-xs tabular-nums text-slate-500">
+                    {s.error ? "—" : `${s.n_products} produits`}
+                  </span>
+                  <form action={removeRadarSite}>
+                    <input type="hidden" name="domain" value={s.domain} />
+                    <button className="text-xs text-slate-300 hover:text-red-600 transition-colors">
+                      Retirer
+                    </button>
+                  </form>
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1">

@@ -55,3 +55,11 @@ model DailyEntryItem {
 
   @@unique([entryId, productId])
 }
+
+/// Boutique concurrente surveillée par le radar best-sellers.
+/// Ajoutée depuis /radar ; le scan quotidien lit cette table.
+model RadarSite {
+  id        String   @id @default(cuid())
+  domain    String   @unique // Domaine nu, ex. "exemple.com"
+  createdAt DateTime @default(now())
+}
