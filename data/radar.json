@@ -1,0 +1,962 @@
+{
+ "date": "2026-09-09",
+ "generated_at": "2026-09-09T20:51:57",
+ "n_sites": 7,
+ "n_strong": 10,
+ "sites": [
+  {
+   "domain": "fr.gianoria.com",
+   "n_products": 85,
+   "boundary": 15,
+   "confidence": "fiable",
+   "warning": null,
+   "compared_to": null,
+   "top": [
+    {
+     "rank": 1,
+     "title": "Body Mina",
+     "price": "29.99",
+     "handle": "body-mina",
+     "url": "https://fr.gianoria.com/products/body-mina",
+     "age_days": 34
+    },
+    {
+     "rank": 2,
+     "title": "Robe Wavy",
+     "price": "39.99",
+     "handle": "wavy-draped-dress",
+     "url": "https://fr.gianoria.com/products/wavy-draped-dress",
+     "age_days": 12
+    },
+    {
+     "rank": 3,
+     "title": "Robe Infinity",
+     "price": "39.99",
+     "handle": "inifinity-dress",
+     "url": "https://fr.gianoria.com/products/inifinity-dress",
+     "age_days": 17
+    },
+    {
+     "rank": 4,
+     "title": "Veste moto Xara",
+     "price": "34.99",
+     "handle": "xara-moto-jacket",
+     "url": "https://fr.gianoria.com/products/xara-moto-jacket",
+     "age_days": 19
+    },
+    {
+     "rank": 5,
+     "title": "Robe longue Serenity",
+     "price": "34.99",
+     "handle": "serenity-maxi-dress",
+     "url": "https://fr.gianoria.com/products/serenity-maxi-dress",
+     "age_days": 34
+    },
+    {
+     "rank": 6,
+     "title": "Robe dos nu Athena",
+     "price": "39.99",
+     "handle": "athena-halter-dress",
+     "url": "https://fr.gianoria.com/products/athena-halter-dress",
+     "age_days": 10
+    },
+    {
+     "rank": 7,
+     "title": "Robe Raya",
+     "price": "39.99",
+     "handle": "raya-gown",
+     "url": "https://fr.gianoria.com/products/raya-gown",
+     "age_days": 10
+    },
+    {
+     "rank": 8,
+     "title": "Robe perlée Noor",
+     "price": "59.99",
+     "handle": "noor-beaded-dress",
+     "url": "https://fr.gianoria.com/products/noor-beaded-dress",
+     "age_days": 11
+    },
+    {
+     "rank": 9,
+     "title": "Gilet iconique en similicuir",
+     "price": "44.99",
+     "handle": "icon-leather-vest",
+     "url": "https://fr.gianoria.com/products/icon-leather-vest",
+     "age_days": 21
+    },
+    {
+     "rank": 10,
+     "title": "Combinaison corset Cassia",
+     "price": "39.99",
+     "handle": "cassia-jumpsuit",
+     "url": "https://fr.gianoria.com/products/cassia-jumpsuit",
+     "age_days": 29
+    },
+    {
+     "rank": 11,
+     "title": "Haut Lena",
+     "price": "29.99",
+     "handle": "lena-top",
+     "url": "https://fr.gianoria.com/products/lena-top",
+     "age_days": 34
+    },
+    {
+     "rank": 12,
+     "title": "Robe courte Mina dos croisé",
+     "price": "24.99",
+     "handle": "mina-cross-back-minidress",
+     "url": "https://fr.gianoria.com/products/mina-cross-back-minidress",
+     "age_days": 34
+    },
+    {
+     "rank": 13,
+     "title": "Robe duveteuse",
+     "price": "39.99",
+     "handle": "fluffy-dress",
+     "url": "https://fr.gianoria.com/products/fluffy-dress",
+     "age_days": 34
+    },
+    {
+     "rank": 14,
+     "title": "Pantalon en crochet à franges Playa Kirsty",
+     "price": "39.99",
+     "handle": "playa-kirsty-crochet-knit-pants",
+     "url": "https://fr.gianoria.com/products/playa-kirsty-crochet-knit-pants",
+     "age_days": 34
+    },
+    {
+     "rank": 15,
+     "title": "Ensemble Orlena",
+     "price": "34.99",
+     "handle": "orlena-set",
+     "url": "https://fr.gianoria.com/products/orlena-set",
+     "age_days": 34
+    }
+   ],
+   "strong": [
+    {
+     "handle": "wavy-draped-dress",
+     "title": "Robe Wavy",
+     "price": "39.99",
+     "rank": 2,
+     "age_days": 12,
+     "url": "https://fr.gianoria.com/products/wavy-draped-dress"
+    },
+    {
+     "handle": "athena-halter-dress",
+     "title": "Robe dos nu Athena",
+     "price": "39.99",
+     "rank": 6,
+     "age_days": 10,
+     "url": "https://fr.gianoria.com/products/athena-halter-dress"
+    },
+    {
+     "handle": "raya-gown",
+     "title": "Robe Raya",
+     "price": "39.99",
+     "rank": 7,
+     "age_days": 10,
+     "url": "https://fr.gianoria.com/products/raya-gown"
+    },
+    {
+     "handle": "noor-beaded-dress",
+     "title": "Robe perlée Noor",
+     "price": "59.99",
+     "rank": 8,
+     "age_days": 11,
+     "url": "https://fr.gianoria.com/products/noor-beaded-dress"
+    }
+   ],
+   "watch": [
+    {
+     "handle": "inifinity-dress",
+     "title": "Robe Infinity",
+     "price": "39.99",
+     "rank": 3,
+     "age_days": 17,
+     "url": "https://fr.gianoria.com/products/inifinity-dress"
+    },
+    {
+     "handle": "xara-moto-jacket",
+     "title": "Veste moto Xara",
+     "price": "34.99",
+     "rank": 4,
+     "age_days": 19,
+     "url": "https://fr.gianoria.com/products/xara-moto-jacket"
+    }
+   ],
+   "fresh": [
+    {
+     "handle": "napoleon-jacket",
+     "title": "Napoleon Jacket",
+     "price": "49.99",
+     "rank": 16,
+     "age_days": 3,
+     "url": "https://fr.gianoria.com/products/napoleon-jacket"
+    }
+   ],
+   "movements": {}
+  },
+  {
+   "domain": "avontti.com",
+   "error": "HTTP Error 404: Not Found"
+  },
+  {
+   "domain": "lilystrose.com",
+   "n_products": 22,
+   "boundary": 2,
+   "confidence": "faible",
+   "warning": null,
+   "compared_to": null,
+   "top": [
+    {
+     "rank": 1,
+     "title": "Trench mi-saison court femme marron",
+     "price": "34.90",
+     "handle": "trench-mi-saison-court-femme-marron",
+     "url": "https://lilystrose.com/products/trench-mi-saison-court-femme-marron",
+     "age_days": 3
+    },
+    {
+     "rank": 2,
+     "title": "Robe Pink Flow",
+     "price": "39.90",
+     "handle": "robe-pink-flow2",
+     "url": "https://lilystrose.com/products/robe-pink-flow2",
+     "age_days": 6
+    },
+    {
+     "rank": 3,
+     "title": "Veste courte Aline",
+     "price": "49.90",
+     "handle": "veste-courte-aline",
+     "url": "https://lilystrose.com/products/veste-courte-aline",
+     "age_days": 6
+    },
+    {
+     "rank": 4,
+     "title": "The DOLCE",
+     "price": "49.90",
+     "handle": "the-dolce",
+     "url": "https://lilystrose.com/products/the-dolce",
+     "age_days": 6
+    },
+    {
+     "rank": 5,
+     "title": "Robe Mykonos",
+     "price": "39.90",
+     "handle": "robe-mykonos",
+     "url": "https://lilystrose.com/products/robe-mykonos",
+     "age_days": 6
+    },
+    {
+     "rank": 6,
+     "title": "ALBA — Mini robe Ivoire",
+     "price": "39.90",
+     "handle": "alba-mini-robe-ivoire",
+     "url": "https://lilystrose.com/products/alba-mini-robe-ivoire",
+     "age_days": 6
+    },
+    {
+     "rank": 7,
+     "title": "PRESTIGE — Robe longue halter dos nu ivoire",
+     "price": "59.90",
+     "handle": "prestige-robe-longue-halter-dos-nu-ivoire",
+     "url": "https://lilystrose.com/products/prestige-robe-longue-halter-dos-nu-ivoire",
+     "age_days": 6
+    },
+    {
+     "rank": 8,
+     "title": "Soleil de Cassis",
+     "price": "44.90",
+     "handle": "soleil-de-cassis",
+     "url": "https://lilystrose.com/products/soleil-de-cassis",
+     "age_days": 6
+    },
+    {
+     "rank": 9,
+     "title": "Robe Caracas",
+     "price": "44.90",
+     "handle": "robe-caracas",
+     "url": "https://lilystrose.com/products/robe-caracas",
+     "age_days": 6
+    },
+    {
+     "rank": 10,
+     "title": "Brise de Saint-Tropez",
+     "price": "44.90",
+     "handle": "brise-de-saint-tropez",
+     "url": "https://lilystrose.com/products/brise-de-saint-tropez",
+     "age_days": 6
+    },
+    {
+     "rank": 11,
+     "title": "Robe Francesca",
+     "price": "59.90",
+     "handle": "robe-francesca",
+     "url": "https://lilystrose.com/products/robe-francesca",
+     "age_days": 6
+    },
+    {
+     "rank": 12,
+     "title": "Poncho Lisa",
+     "price": "49.90",
+     "handle": "scarf-coat",
+     "url": "https://lilystrose.com/products/scarf-coat",
+     "age_days": 6
+    },
+    {
+     "rank": 13,
+     "title": "Trench-Coat Eva",
+     "price": "49.90",
+     "handle": "eva-trench-coat",
+     "url": "https://lilystrose.com/products/eva-trench-coat",
+     "age_days": 6
+    },
+    {
+     "rank": 14,
+     "title": "Manteau Fourrure Mila",
+     "price": "39.90",
+     "handle": "fourrure-mila",
+     "url": "https://lilystrose.com/products/fourrure-mila",
+     "age_days": 6
+    },
+    {
+     "rank": 15,
+     "title": "Poncho Isabella",
+     "price": "44.90",
+     "handle": "poncho-isabella",
+     "url": "https://lilystrose.com/products/poncho-isabella",
+     "age_days": 6
+    }
+   ],
+   "strong": [],
+   "watch": [],
+   "fresh": [
+    {
+     "handle": "trench-mi-saison-court-femme-marron",
+     "title": "Trench mi-saison court femme marron",
+     "price": "34.90",
+     "rank": 1,
+     "age_days": 3,
+     "url": "https://lilystrose.com/products/trench-mi-saison-court-femme-marron"
+    }
+   ],
+   "movements": {}
+  },
+  {
+   "domain": "valentina-paris.com",
+   "n_products": 130,
+   "boundary": 9,
+   "confidence": "fiable",
+   "warning": null,
+   "compared_to": null,
+   "top": [
+    {
+     "rank": 1,
+     "title": "Sac Melanie",
+     "price": "39.90",
+     "handle": "sac-haley",
+     "url": "https://valentina-paris.com/products/sac-haley",
+     "age_days": 38
+    },
+    {
+     "rank": 2,
+     "title": "Robe Orelia",
+     "price": "39.90",
+     "handle": "robe-orelia",
+     "url": "https://valentina-paris.com/products/robe-orelia",
+     "age_days": 67
+    },
+    {
+     "rank": 3,
+     "title": "Robe Alya",
+     "price": "34.90",
+     "handle": "robe-alya",
+     "url": "https://valentina-paris.com/products/robe-alya",
+     "age_days": 59
+    },
+    {
+     "rank": 4,
+     "title": "Trench Margot",
+     "price": "39.90",
+     "handle": "trench-margot",
+     "url": "https://valentina-paris.com/products/trench-margot",
+     "age_days": 4
+    },
+    {
+     "rank": 5,
+     "title": "Sac Christina",
+     "price": "39.99",
+     "handle": "sac-le-pliage-l",
+     "url": "https://valentina-paris.com/products/sac-le-pliage-l",
+     "age_days": 38
+    },
+    {
+     "rank": 6,
+     "title": "Sac Ruby",
+     "price": "49.90",
+     "handle": "sac-rubie",
+     "url": "https://valentina-paris.com/products/sac-rubie",
+     "age_days": 38
+    },
+    {
+     "rank": 7,
+     "title": "Manteau Mathilde",
+     "price": "59.90",
+     "handle": "manteau-mathilde",
+     "url": "https://valentina-paris.com/products/manteau-mathilde",
+     "age_days": 92
+    },
+    {
+     "rank": 8,
+     "title": "Sac Louane",
+     "price": "89.90",
+     "handle": "sac-louane",
+     "url": "https://valentina-paris.com/products/sac-louane",
+     "age_days": 29
+    },
+    {
+     "rank": 9,
+     "title": "Manteau Sophia",
+     "price": "39.90",
+     "handle": "manteau-elise",
+     "url": "https://valentina-paris.com/products/manteau-elise",
+     "age_days": 92
+    },
+    {
+     "rank": 10,
+     "title": "Manteau Florence",
+     "price": "39.90",
+     "handle": "manteau-florence",
+     "url": "https://valentina-paris.com/products/manteau-florence",
+     "age_days": 2
+    },
+    {
+     "rank": 11,
+     "title": "Bottines Aurore",
+     "price": "49.90",
+     "handle": "bottes-aurore",
+     "url": "https://valentina-paris.com/products/bottes-aurore",
+     "age_days": 7
+    },
+    {
+     "rank": 12,
+     "title": "Bottes Alhanna",
+     "price": "69.90",
+     "handle": "bottes-alhanna",
+     "url": "https://valentina-paris.com/products/bottes-alhanna",
+     "age_days": 8
+    },
+    {
+     "rank": 13,
+     "title": "Sac Cecile",
+     "price": "39.90",
+     "handle": "sac-cecile",
+     "url": "https://valentina-paris.com/products/sac-cecile",
+     "age_days": 15
+    },
+    {
+     "rank": 14,
+     "title": "Sac Alice",
+     "price": "49.90",
+     "handle": "sac-alice",
+     "url": "https://valentina-paris.com/products/sac-alice",
+     "age_days": 21
+    },
+    {
+     "rank": 15,
+     "title": "Bottes Amelie",
+     "price": "91.90",
+     "handle": "bottes-amelie",
+     "url": "https://valentina-paris.com/products/bottes-amelie",
+     "age_days": 22
+    }
+   ],
+   "strong": [
+    {
+     "handle": "trench-margot",
+     "title": "Trench Margot",
+     "price": "39.90",
+     "rank": 4,
+     "age_days": 4,
+     "url": "https://valentina-paris.com/products/trench-margot"
+    }
+   ],
+   "watch": [],
+   "fresh": [
+    {
+     "handle": "manteau-florence",
+     "title": "Manteau Florence",
+     "price": "39.90",
+     "rank": 10,
+     "age_days": 2,
+     "url": "https://valentina-paris.com/products/manteau-florence"
+    }
+   ],
+   "movements": {}
+  },
+  {
+   "domain": "audaline.com",
+   "n_products": 13,
+   "boundary": 0,
+   "confidence": "fiable",
+   "warning": null,
+   "compared_to": null,
+   "top": [
+    {
+     "rank": 1,
+     "title": "Manteau Analie",
+     "price": "44.99",
+     "handle": "manteau-analie",
+     "url": "https://audaline.com/products/manteau-analie",
+     "age_days": 3
+    },
+    {
+     "rank": 2,
+     "title": "Robe Delphine",
+     "price": "44.99",
+     "handle": "robe-delphine",
+     "url": "https://audaline.com/products/robe-delphine",
+     "age_days": 4
+    },
+    {
+     "rank": 3,
+     "title": "Robe Ibiza",
+     "price": "44.99",
+     "handle": "robe-ibiza",
+     "url": "https://audaline.com/products/robe-ibiza",
+     "age_days": 4
+    },
+    {
+     "rank": 4,
+     "title": "Robe Rosalia",
+     "price": "44.99",
+     "handle": "robe-rosalia",
+     "url": "https://audaline.com/products/robe-rosalia",
+     "age_days": 4
+    },
+    {
+     "rank": 5,
+     "title": "Robe Zaria",
+     "price": "59.99",
+     "handle": "robe-zaria",
+     "url": "https://audaline.com/products/robe-zaria",
+     "age_days": 6
+    },
+    {
+     "rank": 6,
+     "title": "Manteau Corrine",
+     "price": "79.99",
+     "handle": "manteau-corrine",
+     "url": "https://audaline.com/products/manteau-corrine",
+     "age_days": 7
+    },
+    {
+     "rank": 7,
+     "title": "Manteau Lizzie",
+     "price": "89.99",
+     "handle": "impermeable-coline",
+     "url": "https://audaline.com/products/impermeable-coline",
+     "age_days": 7
+    },
+    {
+     "rank": 8,
+     "title": "Pantalon Cindy",
+     "price": "49.99",
+     "handle": "pantalon-cindy",
+     "url": "https://audaline.com/products/pantalon-cindy",
+     "age_days": 7
+    },
+    {
+     "rank": 9,
+     "title": "Jean Kelly",
+     "price": "45.99",
+     "handle": "bas-leopard-kelly",
+     "url": "https://audaline.com/products/bas-leopard-kelly",
+     "age_days": 7
+    },
+    {
+     "rank": 10,
+     "title": "Pantalon Cynthia",
+     "price": "45.99",
+     "handle": "robe-carla",
+     "url": "https://audaline.com/products/robe-carla",
+     "age_days": 7
+    },
+    {
+     "rank": 11,
+     "title": "Robe Ivory",
+     "price": "49.99",
+     "handle": "robe-maeylis",
+     "url": "https://audaline.com/products/robe-maeylis",
+     "age_days": 7
+    },
+    {
+     "rank": 12,
+     "title": "Robe Azura",
+     "price": "39.99",
+     "handle": "robe-kelia",
+     "url": "https://audaline.com/products/robe-kelia",
+     "age_days": 7
+    },
+    {
+     "rank": 13,
+     "title": "Robe Alicia",
+     "price": "39.99",
+     "handle": "robe-chloe-copie",
+     "url": "https://audaline.com/products/robe-chloe-copie",
+     "age_days": 7
+    }
+   ],
+   "strong": [],
+   "watch": [],
+   "fresh": [
+    {
+     "handle": "manteau-analie",
+     "title": "Manteau Analie",
+     "price": "44.99",
+     "rank": 1,
+     "age_days": 3,
+     "url": "https://audaline.com/products/manteau-analie"
+    }
+   ],
+   "movements": {}
+  },
+  {
+   "domain": "olyvaa.co",
+   "n_products": 23,
+   "boundary": 22,
+   "confidence": "faible",
+   "warning": "/collections/all absent, classement lu sur /collections/tous-les-produits",
+   "compared_to": null,
+   "top": [
+    {
+     "rank": 1,
+     "title": "OLYVAA - Veste en Cape Cordélia",
+     "price": "49.95",
+     "handle": "olyvaa-veste-en-cape-cordelia",
+     "url": "https://olyvaa.co/products/olyvaa-veste-en-cape-cordelia",
+     "age_days": 11
+    },
+    {
+     "rank": 2,
+     "title": "OLYVAA - Doudoune Andréa",
+     "price": "44.95",
+     "handle": "olyvaa-doudoune-andrea",
+     "url": "https://olyvaa.co/products/olyvaa-doudoune-andrea",
+     "age_days": 8
+    },
+    {
+     "rank": 3,
+     "title": "OLYVAA - Trench Coat Alina",
+     "price": "44.95",
+     "handle": "olyvaa-trench-coat-alina",
+     "url": "https://olyvaa.co/products/olyvaa-trench-coat-alina",
+     "age_days": 8
+    },
+    {
+     "rank": 4,
+     "title": "OLYVAA - Robe Longue Louisa",
+     "price": "49.95",
+     "handle": "olyvaa-robe-longue-louisa",
+     "url": "https://olyvaa.co/products/olyvaa-robe-longue-louisa",
+     "age_days": 11
+    },
+    {
+     "rank": 5,
+     "title": "OLYVAA - Robe Longue Serena",
+     "price": "62.95",
+     "handle": "olyvaa-robe-longue-serena",
+     "url": "https://olyvaa.co/products/olyvaa-robe-longue-serena",
+     "age_days": 11
+    },
+    {
+     "rank": 6,
+     "title": "OLYVAA - Robe Longue Amélie",
+     "price": "57.95",
+     "handle": "olyvaa-robe-longue-amelie",
+     "url": "https://olyvaa.co/products/olyvaa-robe-longue-amelie",
+     "age_days": 11
+    },
+    {
+     "rank": 7,
+     "title": "OLYVAA - Trench Coat Serena",
+     "price": "47.95",
+     "handle": "olyvaa-trench-coat-serena",
+     "url": "https://olyvaa.co/products/olyvaa-trench-coat-serena",
+     "age_days": 11
+    },
+    {
+     "rank": 8,
+     "title": "OLYVAA - Trench-Coat Annah",
+     "price": "44.95",
+     "handle": "olyvaa-trench-coat-annah",
+     "url": "https://olyvaa.co/products/olyvaa-trench-coat-annah",
+     "age_days": 1
+    },
+    {
+     "rank": 9,
+     "title": "OLYVAA - Cape Top en Maille Lorah",
+     "price": "39.95",
+     "handle": "olyvaa-cape-top-en-maille-lorah",
+     "url": "https://olyvaa.co/products/olyvaa-cape-top-en-maille-lorah",
+     "age_days": 8
+    },
+    {
+     "rank": 10,
+     "title": "OLYVAA - Trench Long Valaria",
+     "price": "64.95",
+     "handle": "olyvaa-trench-long-valaria",
+     "url": "https://olyvaa.co/products/olyvaa-trench-long-valaria",
+     "age_days": 8
+    },
+    {
+     "rank": 11,
+     "title": "OLYVAA - Fourrure Juliana",
+     "price": "49.95",
+     "handle": "olyvaa-fourrure-juliana",
+     "url": "https://olyvaa.co/products/olyvaa-fourrure-juliana",
+     "age_days": 8
+    },
+    {
+     "rank": 12,
+     "title": "OLYVAA - Veste Ivanna",
+     "price": "47.95",
+     "handle": "olyvaa-veste-ivanna",
+     "url": "https://olyvaa.co/products/olyvaa-veste-ivanna",
+     "age_days": 8
+    },
+    {
+     "rank": 13,
+     "title": "OLYVAA - Veste Maloya",
+     "price": "47.95",
+     "handle": "olyvaa-veste-maloya",
+     "url": "https://olyvaa.co/products/olyvaa-veste-maloya",
+     "age_days": 11
+    },
+    {
+     "rank": 14,
+     "title": "OLYVAA - Robe Longue Julietta",
+     "price": "54.95",
+     "handle": "olyvaa-robe-longue-julietta",
+     "url": "https://olyvaa.co/products/olyvaa-robe-longue-julietta",
+     "age_days": 11
+    },
+    {
+     "rank": 15,
+     "title": "OLYVAA - Robe Longue Camélia",
+     "price": "52.95",
+     "handle": "olyvaa-robe-longue-camelia",
+     "url": "https://olyvaa.co/products/olyvaa-robe-longue-camelia",
+     "age_days": 11
+    }
+   ],
+   "strong": [],
+   "watch": [],
+   "fresh": [
+    {
+     "handle": "olyvaa-trench-coat-annah",
+     "title": "OLYVAA - Trench-Coat Annah",
+     "price": "44.95",
+     "rank": 8,
+     "age_days": 1,
+     "url": "https://olyvaa.co/products/olyvaa-trench-coat-annah"
+    }
+   ],
+   "movements": {}
+  },
+  {
+   "domain": "nelyafashion.com",
+   "n_products": 26,
+   "boundary": 7,
+   "confidence": "fiable",
+   "warning": null,
+   "compared_to": null,
+   "top": [
+    {
+     "rank": 1,
+     "title": "Trench Nora - Trench Court Ceinturé Femme",
+     "price": "44.99",
+     "handle": "trench-nora",
+     "url": "https://nelyafashion.com/products/trench-nora",
+     "age_days": 12
+    },
+    {
+     "rank": 2,
+     "title": "Veste Alma - Veste Effet Cuir Ceinturée Femme",
+     "price": "44.99",
+     "handle": "veste-alma",
+     "url": "https://nelyafashion.com/products/veste-alma",
+     "age_days": 14
+    },
+    {
+     "rank": 3,
+     "title": "Manteau Bianca en Fausse Fourrure",
+     "price": "44.99",
+     "handle": "manteau-en-fausse-fourrure-bianca-maison-nelya",
+     "url": "https://nelyafashion.com/products/manteau-en-fausse-fourrure-bianca-maison-nelya",
+     "age_days": 10
+    },
+    {
+     "rank": 4,
+     "title": "Veste en satin Iris",
+     "price": "39.99",
+     "handle": "veste-en-satin-iris",
+     "url": "https://nelyafashion.com/products/veste-en-satin-iris",
+     "age_days": 4
+    },
+    {
+     "rank": 5,
+     "title": "trench en cuir Océan",
+     "price": "44.99",
+     "handle": "trench-en-cuire-ocean",
+     "url": "https://nelyafashion.com/products/trench-en-cuire-ocean",
+     "age_days": 2
+    },
+    {
+     "rank": 6,
+     "title": "Veste Brooklyn",
+     "price": "44.99",
+     "handle": "veste-brooklyn",
+     "url": "https://nelyafashion.com/products/veste-brooklyn",
+     "age_days": 22
+    },
+    {
+     "rank": 7,
+     "title": "Robe Orélia",
+     "price": "65.99",
+     "handle": "robe-orelia",
+     "url": "https://nelyafashion.com/products/robe-orelia",
+     "age_days": 23
+    },
+    {
+     "rank": 8,
+     "title": "Cape Giulia",
+     "price": "39.99",
+     "handle": "cape-giulia",
+     "url": "https://nelyafashion.com/products/cape-giulia",
+     "age_days": 1
+    },
+    {
+     "rank": 9,
+     "title": "veste en cuir Seyes",
+     "price": "34.99",
+     "handle": "veste-en-cuire-seyes",
+     "url": "https://nelyafashion.com/products/veste-en-cuire-seyes",
+     "age_days": 3
+    },
+    {
+     "rank": 10,
+     "title": "Trench Valentina",
+     "price": "44.99",
+     "handle": "trench-valentina",
+     "url": "https://nelyafashion.com/products/trench-valentina",
+     "age_days": 10
+    },
+    {
+     "rank": 11,
+     "title": "Maison-Nelya I Robe Nora",
+     "price": "79.99",
+     "handle": "maison-nelya-i-robe-nora",
+     "url": "https://nelyafashion.com/products/maison-nelya-i-robe-nora",
+     "age_days": 21
+    },
+    {
+     "rank": 12,
+     "title": "Sac Champs-Elysées",
+     "price": "59.99",
+     "handle": "sac-champs-elysees",
+     "url": "https://nelyafashion.com/products/sac-champs-elysees",
+     "age_days": 22
+    },
+    {
+     "rank": 13,
+     "title": "veste Angela",
+     "price": "49.99",
+     "handle": "veste-angela",
+     "url": "https://nelyafashion.com/products/veste-angela",
+     "age_days": 22
+    },
+    {
+     "rank": 14,
+     "title": "Cape Eleonore",
+     "price": "49.99",
+     "handle": "cape-eleonore",
+     "url": "https://nelyafashion.com/products/cape-eleonore",
+     "age_days": 22
+    },
+    {
+     "rank": 15,
+     "title": "Sac cabas",
+     "price": "139.00",
+     "handle": "sac-cabas",
+     "url": "https://nelyafashion.com/products/sac-cabas",
+     "age_days": 23
+    }
+   ],
+   "strong": [
+    {
+     "handle": "trench-nora",
+     "title": "Trench Nora - Trench Court Ceinturé Femme",
+     "price": "44.99",
+     "rank": 1,
+     "age_days": 12,
+     "url": "https://nelyafashion.com/products/trench-nora"
+    },
+    {
+     "handle": "veste-alma",
+     "title": "Veste Alma - Veste Effet Cuir Ceinturée Femme",
+     "price": "44.99",
+     "rank": 2,
+     "age_days": 14,
+     "url": "https://nelyafashion.com/products/veste-alma"
+    },
+    {
+     "handle": "manteau-en-fausse-fourrure-bianca-maison-nelya",
+     "title": "Manteau Bianca en Fausse Fourrure",
+     "price": "44.99",
+     "rank": 3,
+     "age_days": 10,
+     "url": "https://nelyafashion.com/products/manteau-en-fausse-fourrure-bianca-maison-nelya"
+    },
+    {
+     "handle": "veste-en-satin-iris",
+     "title": "Veste en satin Iris",
+     "price": "39.99",
+     "rank": 4,
+     "age_days": 4,
+     "url": "https://nelyafashion.com/products/veste-en-satin-iris"
+    },
+    {
+     "handle": "trench-en-cuire-ocean",
+     "title": "trench en cuir Océan",
+     "price": "44.99",
+     "rank": 5,
+     "age_days": 2,
+     "url": "https://nelyafashion.com/products/trench-en-cuire-ocean"
+    }
+   ],
+   "watch": [],
+   "fresh": [
+    {
+     "handle": "cape-giulia",
+     "title": "Cape Giulia",
+     "price": "39.99",
+     "rank": 8,
+     "age_days": 1,
+     "url": "https://nelyafashion.com/products/cape-giulia"
+    },
+    {
+     "handle": "veste-en-cuire-seyes",
+     "title": "veste en cuir Seyes",
+     "price": "34.99",
+     "rank": 9,
+     "age_days": 3,
+     "url": "https://nelyafashion.com/products/veste-en-cuire-seyes"
+    }
+   ],
+   "movements": {}
+  }
+ ]
+}

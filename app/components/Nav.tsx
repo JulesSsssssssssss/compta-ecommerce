@@ -7,6 +7,7 @@ const links = [
   { href: "/", label: "Tableau de bord" },
   { href: "/saisie", label: "Saisie du jour" },
   { href: "/produits", label: "Produits" },
+  { href: "/radar", label: "Radar" },
 ];
 
 export function Nav() {
