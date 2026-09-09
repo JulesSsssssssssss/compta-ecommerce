@@ -12,6 +12,8 @@ type Row = {
   rank: number;
   age_days: number;
   url: string;
+  /** true = vend deja, false = aucune vente, null = frontiere non fiable */
+  selling?: boolean | null;
 };
 
 type Move = { title: string; rank: number; from: number; delta?: number };
@@ -204,7 +206,7 @@ export default function RadarPage() {
         <Card className="overflow-hidden">
           <SectionTitle
             title="Nouveautés des concurrents"
-            subtitle="En ligne depuis moins de 3 jours, aucune vente pour l'instant"
+            subtitle="En ligne depuis moins de 7 jours — celles qui vendent déjà sont en tête"
           />
           <ul className="divide-y divide-slate-200">
             {fresh.map(({ r, s }) => (
@@ -212,6 +214,13 @@ export default function RadarPage() {
                 key={s.domain + r.handle}
                 className="px-4 sm:px-5 py-3 flex items-center gap-3"
               >
+                {r.selling ? (
+                  <Rank n={r.rank} />
+                ) : (
+                  <span className="grid place-items-center w-8 h-8 shrink-0 rounded-lg border border-dashed border-slate-300 text-slate-300 text-xs">
+                    —
+                  </span>
+                )}
                 <div className="min-w-0 flex-1">
                   <a
                     href={r.url}
@@ -221,8 +230,20 @@ export default function RadarPage() {
                   >
                     {r.title}
                   </a>
-                  <p className="text-xs text-slate-400 mt-0.5 truncate">
-                    {s.domain} · il y a {jours(r.age_days)}
+                  <p className="text-xs mt-0.5 truncate">
+                    <span className="text-slate-400">
+                      {s.domain} · il y a {jours(r.age_days)} ·{" "}
+                    </span>
+                    {r.selling ? (
+                      <span className="text-emerald-600 font-medium">
+                        déjà {r.rank}
+                        <sup>{r.rank === 1 ? "er" : "e"}</sup> des ventes
+                      </span>
+                    ) : r.selling === null ? (
+                      <span className="text-slate-400">classement non fiable</span>
+                    ) : (
+                      <span className="text-slate-400">pas encore de vente</span>
+                    )}
                   </p>
                 </div>
                 <span className="text-sm tabular-nums text-slate-700 shrink-0">
