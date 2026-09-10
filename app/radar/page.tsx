@@ -26,6 +26,12 @@ type Row = {
   url: string;
   /** true = vend deja, false = aucune vente, null = frontiere non fiable */
   selling?: boolean | null;
+  /** Rang au scan precedent, null si absent ou pas de comparaison possible. */
+  was?: number | null;
+  /** Places gagnees depuis le scan precedent (negatif = perdues). */
+  delta?: number | null;
+  /** Vrai si le produit ne figurait pas au scan precedent. */
+  is_new?: boolean;
 };
 
 type Move = { title: string; rank: number; from: number; delta?: number };
@@ -45,6 +51,7 @@ type Site = {
   movements?: {
     first_sale?: Move[];
     climbing?: Move[];
+    falling?: Move[];
     new_products?: Move[];
     dropped_out?: Move[];
   };
@@ -92,6 +99,45 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle?: string })
   );
 }
 
+/**
+ * Mouvement d'un produit depuis le scan de la veille, posé sur sa propre
+ * ligne. Un produit qui gagne une place doit se voir là où on le lit, pas
+ * seulement dans une carte séparée plus bas.
+ *
+ * Rien ne s'affiche quand il n'y a pas de scan précédent auquel se comparer :
+ * mieux vaut un blanc qu'un « = » qui laisserait croire à une stabilité
+ * réellement mesurée.
+ */
+function Delta({ r }: { r: Row }) {
+  if (r.is_new) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-indigo-50 px-1.5 py-0.5 text-[11px] font-medium text-indigo-600 whitespace-nowrap">
+        nouveau
+      </span>
+    );
+  }
+  if (r.delta == null) return null;
+  if (r.delta === 0) {
+    return (
+      <span className="text-[11px] text-slate-300 tabular-nums" title="Rang inchangé depuis hier">
+        =
+      </span>
+    );
+  }
+  const up = r.delta > 0;
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 text-[11px] font-medium tabular-nums whitespace-nowrap ${
+        up ? "text-emerald-600" : "text-slate-400"
+      }`}
+      title={`${r.was}e hier, ${r.rank}e aujourd'hui`}
+    >
+      {up ? "▲" : "▼"}
+      {Math.abs(r.delta)}
+    </span>
+  );
+}
+
 /** Pastille de rang : plus le rang est petit, plus le produit vend. */
 function Rank({ n }: { n: number }) {
   return (
@@ -110,7 +156,10 @@ function Rank({ n }: { n: number }) {
 function ProductRow({ r, domain }: { r: Row; domain: string }) {
   return (
     <li className="px-4 sm:px-5 py-3 flex items-center gap-3">
-      <Rank n={r.rank} />
+      <span className="flex items-center gap-1.5 shrink-0">
+        <Rank n={r.rank} />
+        <span className="w-8"><Delta r={r} /></span>
+      </span>
       <div className="min-w-0 flex-1">
         <a
           href={r.url}
@@ -154,10 +203,30 @@ export default async function RadarPage() {
         (a.r.selling ? a.r.rank - b.r.rank : a.r.age_days - b.r.age_days),
     );
   const scanned = ok.reduce((n, s) => n + (s.n_products ?? 0), 0);
+  // Toutes les categories de mouvement, pas seulement les hausses : une baisse
+  // ou une sortie de la zone de vente dit quelque chose, elle aussi.
   const movers = ok.flatMap((s) => [
     ...(s.movements?.first_sale ?? []).map((m) => ({ m, s, kind: "first" as const })),
     ...(s.movements?.climbing ?? []).map((m) => ({ m, s, kind: "climb" as const })),
+    ...(s.movements?.new_products ?? []).map((m) => ({ m, s, kind: "new" as const })),
+    ...(s.movements?.falling ?? []).map((m) => ({ m, s, kind: "fall" as const })),
+    ...(s.movements?.dropped_out ?? []).map((m) => ({ m, s, kind: "out" as const })),
   ]);
+  // Le plus parlant d'abord : une premiere vente vaut mieux qu'une place
+  // perdue, et a categorie egale c'est l'ampleur du mouvement qui tranche.
+  const rankOfKind = { first: 0, climb: 1, new: 2, fall: 3, out: 4 };
+  movers.sort(
+    (a, b) =>
+      rankOfKind[a.kind] - rankOfKind[b.kind] ||
+      Math.abs(b.m.delta ?? 0) - Math.abs(a.m.delta ?? 0) ||
+      a.m.rank - b.m.rank,
+  );
+  // Au-dela, la carte devient une liste a scroller plutot qu'un signal.
+  const MOVERS_MAX = 25;
+  const moversShown = movers.slice(0, MOVERS_MAX);
+  // Date de reference du diff : la meme pour tous les sites en pratique.
+  const comparedTo = ok.find((s) => s.compared_to)?.compared_to ?? null;
+  const frDate = (d: string) => d.split("-").reverse().join("/");
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -202,13 +271,16 @@ export default async function RadarPage() {
                 key={s.domain + r.handle}
                 className="px-4 sm:px-5 py-3 flex items-center gap-3 sm:gap-4"
               >
-                {r.selling ? (
-                  <Rank n={r.rank} />
-                ) : (
-                  <span className="grid place-items-center w-8 h-8 shrink-0 rounded-lg border border-dashed border-slate-300 text-slate-300 text-xs">
-                    —
-                  </span>
-                )}
+                <span className="flex items-center gap-1.5 shrink-0">
+                  {r.selling ? (
+                    <Rank n={r.rank} />
+                  ) : (
+                    <span className="grid place-items-center w-8 h-8 shrink-0 rounded-lg border border-dashed border-slate-300 text-slate-300 text-xs">
+                      —
+                    </span>
+                  )}
+                  <span className="w-8">{r.selling ? <Delta r={r} /> : null}</span>
+                </span>
 
                 {/* Titre : prend toute la largeur disponible */}
                 <a
@@ -274,29 +346,60 @@ export default async function RadarPage() {
         )}
       </Card>
 
-      {movers.length > 0 && (
+      {/* ---- Ce qui a bougé depuis la veille ---- */}
+      {comparedTo && (
         <Card className="overflow-hidden">
           <SectionTitle
             title="Mouvements depuis le dernier scan"
-            subtitle="Progression réelle au classement, mesurée jour après jour"
+            subtitle={`Progression réelle au classement, comparée au ${frDate(comparedTo)}`}
           />
-          <ul className="divide-y divide-slate-200">
-            {movers.map(({ m, s, kind }) => (
-              <li key={s.domain + m.title} className="px-4 sm:px-5 py-3">
-                <p className="text-sm font-medium text-slate-900">{m.title}</p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {s.domain} ·{" "}
-                  {kind === "first" ? (
-                    <span className="text-emerald-600 font-medium">
-                      première vente détectée — entre au rang {m.rank}
-                    </span>
-                  ) : (
-                    `${m.from} → ${m.rank} (+${m.delta})`
-                  )}
-                </p>
-              </li>
-            ))}
-          </ul>
+          {movers.length === 0 ? (
+            <p className="px-5 py-8 text-sm text-slate-400 text-center">
+              Aucun changement de rang depuis le dernier scan.
+            </p>
+          ) : (
+            <ul className="divide-y divide-slate-200">
+              {moversShown.map(({ m, s, kind }) => (
+                <li key={s.domain + kind + m.title} className="px-4 sm:px-5 py-3">
+                  <p className="text-sm font-medium text-slate-900">{m.title}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {s.domain} ·{" "}
+                    {kind === "first" ? (
+                      <span className="text-emerald-600 font-medium">
+                        première vente détectée — entre au rang {m.rank}
+                      </span>
+                    ) : kind === "climb" ? (
+                      <span className="text-emerald-600 font-medium">
+                        ▲ {m.from} → {m.rank} ({m.delta} place
+                        {(m.delta ?? 0) > 1 ? "s" : ""} gagnée
+                        {(m.delta ?? 0) > 1 ? "s" : ""})
+                      </span>
+                    ) : kind === "fall" ? (
+                      <>
+                        ▼ {m.from} → {m.rank} ({Math.abs(m.delta ?? 0)} place
+                        {Math.abs(m.delta ?? 0) > 1 ? "s" : ""} perdue
+                        {Math.abs(m.delta ?? 0) > 1 ? "s" : ""})
+                      </>
+                    ) : kind === "new" ? (
+                      <span className="text-indigo-600 font-medium">
+                        nouveau au classement — entre au rang {m.rank}
+                      </span>
+                    ) : (
+                      `sorti de la zone de vente · ${m.from} → ${m.rank}`
+                    )}
+                  </p>
+                </li>
+              ))}
+              {movers.length > moversShown.length && (
+                <li className="px-4 sm:px-5 py-3 text-xs text-slate-400">
+                  et {movers.length - moversShown.length} autre
+                  {movers.length - moversShown.length > 1 ? "s" : ""} mouvement
+                  {movers.length - moversShown.length > 1 ? "s" : ""} de moindre
+                  ampleur
+                </li>
+              )}
+            </ul>
+          )}
         </Card>
       )}
 

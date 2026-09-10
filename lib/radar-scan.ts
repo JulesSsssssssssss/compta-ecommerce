@@ -53,6 +53,8 @@ export type Move = {
 export type Movements = {
   first_sale: Move[];
   climbing: Move[];
+  /** Baisses de rang chez des produits qui vendent toujours. */
+  falling: Move[];
   new_products: Move[];
   dropped_out: Move[];
 };
@@ -65,6 +67,14 @@ export type Row = {
   age_days: number;
   url: string;
   selling?: boolean | null;
+  /** Rang au scan précédent, `null` si le produit n'y figurait pas. */
+  was?: number | null;
+  /** Places gagnées depuis le scan précédent (négatif = perdues). `null` quand
+   *  la comparaison est impossible : pas de scan précédent, ou produit absent
+   *  de celui-ci — c'est alors `is_new` qui tranche entre les deux. */
+  delta?: number | null;
+  /** Vrai si le produit ne figurait pas au scan précédent. */
+  is_new?: boolean;
 };
 
 export type SiteReport = {
@@ -384,6 +394,7 @@ export function diff(now: Snapshot, prev: Snapshot | null): Movements | null {
   const ev: Movements = {
     first_sale: [],
     climbing: [],
+    falling: [],
     new_products: [],
     dropped_out: [],
   };
@@ -401,11 +412,16 @@ export function diff(now: Snapshot, prev: Snapshot | null): Movements | null {
       ev.first_sale.push({ h, title: t, rank: r + 1, from: was + 1 });
     } else if (isSelling && delta > 0) {
       ev.climbing.push({ h, title: t, rank: r + 1, from: was + 1, delta });
+    } else if (isSelling && delta < 0) {
+      // Une baisse est une information au même titre qu'une hausse : elle dit
+      // qu'un produit s'essouffle pendant que d'autres le dépassent.
+      ev.falling.push({ h, title: t, rank: r + 1, from: was + 1, delta });
     } else if (wasSelling && !isSelling) {
       ev.dropped_out.push({ h, title: t, rank: r + 1, from: was + 1 });
     }
   });
   ev.climbing.sort((a, b) => (b.delta ?? 0) - (a.delta ?? 0));
+  ev.falling.sort((a, b) => (a.delta ?? 0) - (b.delta ?? 0));
   ev.first_sale.sort((a, b) => a.rank - b.rank);
   return ev;
 }
@@ -414,9 +430,15 @@ export function diff(now: Snapshot, prev: Snapshot | null): Movements | null {
  * Croise rang et fraîcheur. Un produit récent bien classé vend VITE ; un
  * produit ancien bien classé a pu accumuler lentement.
  */
-export function buildSignals(snap: Snapshot, ev: Movements | null, day: string) {
+export function buildSignals(
+  snap: Snapshot,
+  ev: Movements | null,
+  day: string,
+  prev: Snapshot | null = null,
+) {
   const { order, products, boundary } = snap;
   const reliable = snap.confidence === "fiable";
+  const rankBefore = rankMap(prev);
   const strong: Row[] = [];
   const watch: Row[] = [];
   let fresh: Row[] = [];
@@ -430,6 +452,7 @@ export function buildSignals(snap: Snapshot, ev: Movements | null, day: string) 
       rank: i + 1,
       age_days: age,
       url: `https://${snap.domain}/products/${h}`,
+      ...movementOf(h, i, rankBefore),
     };
     const selling = i < boundary && reliable;
     if (selling && age <= 14 && i < 10) strong.push(row);
@@ -451,6 +474,29 @@ export function buildSignals(snap: Snapshot, ev: Movements | null, day: string) 
   return { strong, watch, fresh, movements: ev ?? {} };
 }
 
+/** Rang (0-indexé) de chaque produit au scan précédent, s'il y en a un. */
+function rankMap(prev: Snapshot | null): Map<string, number> | null {
+  return prev ? new Map(prev.order.map((h, i) => [h, i])) : null;
+}
+
+/**
+ * Mouvement d'un produit depuis le scan précédent. C'est l'information que
+ * l'on veut voir sur la ligne du produit lui-même : un produit qui gagne une
+ * place ne doit pas obliger à aller la chercher dans une autre carte.
+ */
+function movementOf(
+  handle: string,
+  index: number,
+  before: Map<string, number> | null,
+): { was: number | null; delta: number | null; is_new: boolean } {
+  // Sans scan précédent, rien à comparer — et surtout, ne pas faire passer
+  // tout le catalogue pour des nouveautés.
+  if (!before) return { was: null, delta: null, is_new: false };
+  const was = before.get(handle);
+  if (was === undefined) return { was: null, delta: null, is_new: true };
+  return { was: was + 1, delta: was - index, is_new: false };
+}
+
 /** Fiche d'un site pour le tableau de bord, à partir de son snapshot. */
 export function buildSiteReport(
   snap: Snapshot,
@@ -458,6 +504,7 @@ export function buildSiteReport(
   day: string,
 ): SiteReport {
   const ev = diff(snap, prev);
+  const rankBefore = rankMap(prev);
   return {
     domain: snap.domain,
     n_products: snap.n_products,
@@ -472,8 +519,9 @@ export function buildSiteReport(
       rank: i + 1,
       age_days: ageInDays(day, snap.products[h].created_at),
       url: `https://${snap.domain}/products/${h}`,
+      ...movementOf(h, i, rankBefore),
     })),
-    ...buildSignals(snap, ev, day),
+    ...buildSignals(snap, ev, day, prev),
   };
 }
 
