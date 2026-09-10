@@ -48,6 +48,11 @@ export type Move = {
   rank: number;
   from?: number;
   delta?: number;
+  /** Pour une entrée au classement : le rang atteint est-il dans la zone de
+   *  vente ? `null` quand la frontière du site n'est pas fiable. Sans ça,
+   *  « entre au rang 3 » se lit comme « 3e meilleure vente » alors que sur une
+   *  boutique où deux produits seulement vendent, c'est l'inverse. */
+  selling?: boolean | null;
 };
 
 export type Movements = {
@@ -391,6 +396,7 @@ export async function scanSite(domain: string): Promise<Snapshot> {
 export function diff(now: Snapshot, prev: Snapshot | null): Movements | null {
   if (!prev) return null;
   const oldRank = new Map(prev.order.map((h, i) => [h, i]));
+  const reliable = now.confidence === "fiable";
   const ev: Movements = {
     first_sale: [],
     climbing: [],
@@ -402,7 +408,12 @@ export function diff(now: Snapshot, prev: Snapshot | null): Movements | null {
     const t = now.products[h].title;
     const was = oldRank.get(h);
     if (was === undefined) {
-      ev.new_products.push({ h, title: t, rank: r + 1 });
+      ev.new_products.push({
+        h,
+        title: t,
+        rank: r + 1,
+        selling: reliable ? r + 1 <= now.boundary : null,
+      });
       return;
     }
     const delta = was - r; // positif = remonte
@@ -423,6 +434,12 @@ export function diff(now: Snapshot, prev: Snapshot | null): Movements | null {
   ev.climbing.sort((a, b) => (b.delta ?? 0) - (a.delta ?? 0));
   ev.falling.sort((a, b) => (a.delta ?? 0) - (b.delta ?? 0));
   ev.first_sale.sort((a, b) => a.rank - b.rank);
+  // Une entrée dans la zone de vente est un signal ; une entrée en dessous
+  // n'est qu'un produit de plus au catalogue.
+  ev.new_products.sort(
+    (a, b) =>
+      Number(a.selling !== true) - Number(b.selling !== true) || a.rank - b.rank,
+  );
   return ev;
 }
 

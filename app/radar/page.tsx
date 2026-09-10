@@ -34,7 +34,14 @@ type Row = {
   is_new?: boolean;
 };
 
-type Move = { title: string; rank: number; from: number; delta?: number };
+type Move = {
+  title: string;
+  rank: number;
+  from: number;
+  delta?: number;
+  /** Entree au classement : le rang atteint est-il dans la zone de vente ? */
+  selling?: boolean | null;
+};
 
 type Site = {
   domain: string;
@@ -214,10 +221,17 @@ export default async function RadarPage() {
   ]);
   // Le plus parlant d'abord : une premiere vente vaut mieux qu'une place
   // perdue, et a categorie egale c'est l'ampleur du mouvement qui tranche.
-  const rankOfKind = { first: 0, climb: 1, new: 2, fall: 3, out: 4 };
+  // Un produit qui entre au classement SOUS la zone de vente passe en dernier :
+  // c'est le signal le plus faible, et la carte Nouveautes le montre deja.
+  const priority = (x: { m: Move; kind: string }) =>
+    x.kind === "first" ? 0
+    : x.kind === "climb" ? 1
+    : x.kind === "new" ? (x.m.selling ? 2 : 5)
+    : x.kind === "fall" ? 3
+    : 4;
   movers.sort(
     (a, b) =>
-      rankOfKind[a.kind] - rankOfKind[b.kind] ||
+      priority(a) - priority(b) ||
       Math.abs(b.m.delta ?? 0) - Math.abs(a.m.delta ?? 0) ||
       a.m.rank - b.m.rank,
   );
@@ -381,9 +395,25 @@ export default async function RadarPage() {
                         {Math.abs(m.delta ?? 0) > 1 ? "s" : ""})
                       </>
                     ) : kind === "new" ? (
-                      <span className="text-indigo-600 font-medium">
-                        nouveau au classement — entre au rang {m.rank}
-                      </span>
+                      // « Entre au rang 3 » ne veut rien dire seul : sur une
+                      // boutique ou deux produits vendent, le rang 3 est deja
+                      // hors zone de vente. On le dit.
+                      m.selling ? (
+                        <span className="text-emerald-600 font-medium">
+                          entre au classement au rang {m.rank} —{" "}
+                          <strong>dans la zone de vente</strong>
+                        </span>
+                      ) : m.selling === false ? (
+                        <>
+                          entre au classement au rang {m.rank} — sous la zone de
+                          vente, pas encore de vente
+                        </>
+                      ) : (
+                        <>
+                          entre au classement au rang {m.rank} — zone de vente
+                          non mesurable sur cette boutique
+                        </>
+                      )
                     ) : (
                       `sorti de la zone de vente · ${m.from} → ${m.rank}`
                     )}
