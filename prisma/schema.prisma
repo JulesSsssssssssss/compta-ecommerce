@@ -63,3 +63,39 @@ model RadarSite {
   domain    String   @unique // Domaine nu, ex. "exemple.com"
   createdAt DateTime @default(now())
 }
+
+/// Photo du classement d'une boutique à une date donnée. C'est la référence
+/// contre laquelle le scan suivant se compare : sans elle, pas de mouvements.
+/// Un seul enregistrement par site et par jour — un second scan dans la même
+/// journée écrase le précédent plutôt que de fausser le diff du lendemain.
+model RadarSnapshot {
+  id        String   @id @default(cuid())
+  domain    String
+  date      String // "AAAA-MM-JJ"
+  scannedAt DateTime @default(now())
+  payload   String // JSON : order, products, boundary, confidence, warning
+
+  @@unique([domain, date])
+}
+
+/// Rapport complet affiché par /radar, dans le même format que data/radar.json.
+model RadarReport {
+  id          String   @id @default(cuid())
+  date        String   @unique // "AAAA-MM-JJ"
+  generatedAt DateTime @default(now())
+  payload     String // JSON du tableau de bord
+}
+
+/// Un scan lancé depuis l'application. Le client avance site par site et lit
+/// cette ligne pour dessiner la barre de progression.
+model RadarRun {
+  id        String    @id @default(cuid())
+  status    String    @default("running") // running | done | error
+  domains   String // JSON : les domaines à scanner, dans l'ordre
+  done      Int       @default(0)
+  results   String    @default("[]") // JSON : les fiches de site déjà produites
+  current   String? // Domaine en cours, pour l'afficher pendant le scan
+  error     String?
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+}

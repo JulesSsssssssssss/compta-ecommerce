@@ -1,15 +1,22 @@
 import raw from "@/data/radar.json";
 import { Card, StatCard } from "@/app/components/ui";
+import { RadarScan } from "@/app/components/RadarScan";
 import { prisma } from "@/lib/prisma";
 import { addRadarSite, removeRadarSite } from "@/lib/radar-actions";
 
-// La liste des sites vit en base : elle doit refleter l'ajout immediatement.
+// La liste des sites vit en base, et un scan peut être lancé à tout moment :
+// la page doit refléter l'un comme l'autre immédiatement.
 export const dynamic = "force-dynamic";
 
-// Le JSON est produit en local par scan.py puis poussé dans le dépôt : la page
-// est statique et se met à jour à chaque redéploiement. Volontairement limitée
-// à Card et StatCard, les seuls composants partagés par toutes les versions
-// du design system.
+// Un scan lancé depuis l'application scanne une boutique par requête ; 60 s
+// couvrent largement la plus lente d'entre elles.
+export const maxDuration = 60;
+
+// Deux sources possibles pour le rapport : le scan de 20h, qui écrit
+// data/radar.json dans le dépôt et déclenche un redéploiement, et un scan
+// lancé depuis l'application, qui écrit en base. On affiche le plus récent des
+// deux. Volontairement limitée à Card et StatCard, les seuls composants
+// partagés par toutes les versions du design system.
 type Row = {
   handle: string;
   title: string;
@@ -51,7 +58,25 @@ type Radar = {
   sites: Site[];
 };
 
-const radar = raw as unknown as Radar;
+const fromRepo = raw as unknown as Radar;
+
+/** Le rapport à afficher : celui de la base s'il est plus frais que le JSON. */
+async function latestRadar(): Promise<Radar> {
+  const row = await prisma.radarReport
+    .findFirst({ orderBy: { generatedAt: "desc" } })
+    .catch(() => null);
+  if (!row) return fromRepo;
+  try {
+    const stored = JSON.parse(row.payload) as Radar;
+    // `generated_at` est une heure locale sans fuseau des deux côtés : les
+    // comparer via Date les remet sur la même échelle.
+    return Date.parse(stored.generated_at) > Date.parse(fromRepo.generated_at)
+      ? stored
+      : fromRepo;
+  } catch {
+    return fromRepo;
+  }
+}
 
 const euro = (p: string | null) =>
   p == null ? "—" : `${Number(p).toFixed(2).replace(".", ",")} €`;
@@ -107,6 +132,7 @@ function ProductRow({ r, domain }: { r: Row; domain: string }) {
 }
 
 export default async function RadarPage() {
+  const radar = await latestRadar();
   const tracked = await prisma.radarSite
     .findMany({ orderBy: { domain: "asc" } })
     .catch(() => [] as { domain: string }[]);
@@ -135,14 +161,17 @@ export default async function RadarPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
-          Radar concurrents
-        </h1>
-        <p className="text-sm text-slate-500 mt-0.5">
-          Les produits récents qui se vendent déjà chez les concurrents — des
-          candidats au lancement.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
+            Radar concurrents
+          </h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Les produits récents qui se vendent déjà chez les concurrents — des
+            candidats au lancement.
+          </p>
+        </div>
+        <RadarScan />
       </div>
 
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
@@ -289,7 +318,7 @@ export default async function RadarPage() {
       <Card className="overflow-hidden">
         <SectionTitle
           title="Sites surveillés"
-          subtitle="Un site ajouté ici est scanné au prochain passage, ce soir à 20h"
+          subtitle="Un site ajouté ici entre dans le prochain scan — celui de 20h, ou celui que tu lances toi-même"
         />
         <form
           action={addRadarSite}
@@ -317,7 +346,7 @@ export default async function RadarPage() {
                     {d}
                   </span>
                   <span className="text-xs text-indigo-600">
-                    Ajouté — sera scanné au prochain passage
+                    Ajouté — lance un scan pour le voir apparaître
                   </span>
                 </div>
                 <form action={removeRadarSite} className="shrink-0">
@@ -377,7 +406,9 @@ export default async function RadarPage() {
         sans aucune vente ne peuvent pas être départagés et retombent en ordre de
         date de création — c&apos;est cette rupture qui permet de savoir qui a
         vendu. Le classement reste <strong>ordinal</strong> : il dit qui vend, pas
-        combien. Scan du {radar.generated_at.replace("T", " à ")}.
+        combien. Scan automatique tous les soirs à 20h ; le bouton en haut de
+        page en relance un à la demande. Dernier scan :{" "}
+        {radar.generated_at.replace("T", " à ")}.
       </p>
     </div>
   );
