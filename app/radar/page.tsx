@@ -35,6 +35,8 @@ type Row = {
 };
 
 type Move = {
+  /** Handle Shopify du produit : de quoi reconstruire l'URL de sa fiche. */
+  h?: string;
   title: string;
   rank: number;
   from: number;
@@ -375,7 +377,22 @@ export default async function RadarPage() {
             <ul className="divide-y divide-slate-200">
               {moversShown.map(({ m, s, kind }) => (
                 <li key={s.domain + kind + m.title} className="px-4 sm:px-5 py-3">
-                  <p className="text-sm font-medium text-slate-900">{m.title}</p>
+                  {/* Le handle manque sur les rapports produits avant qu'il ne
+                      soit exporte : on retombe alors sur du texte simple. */}
+                  {m.h ? (
+                    <a
+                      href={`https://${s.domain}/products/${m.h}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium text-slate-900 hover:text-indigo-600 hover:underline block truncate"
+                    >
+                      {m.title}
+                    </a>
+                  ) : (
+                    <p className="text-sm font-medium text-slate-900 truncate">
+                      {m.title}
+                    </p>
+                  )}
                   <p className="text-xs text-slate-400 mt-0.5">
                     {s.domain} ·{" "}
                     {kind === "first" ? (
