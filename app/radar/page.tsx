@@ -4,6 +4,12 @@ import { Card, StatCard } from "@/app/components/ui";
 import { RadarScan } from "@/app/components/RadarScan";
 import { prisma } from "@/lib/prisma";
 import { addRadarSite, removeRadarSite } from "@/lib/radar-actions";
+import {
+  isRealClimb,
+  loadTrends,
+  type Step,
+  type Trends,
+} from "@/lib/radar-trends";
 
 // La liste des sites vit en base, et un scan peut être lancé à tout moment :
 // la page doit refléter l'un comme l'autre immédiatement.
@@ -73,6 +79,8 @@ type Radar = {
   n_sites: number;
   n_strong: number;
   sites: Site[];
+  /** Absent des rapports antérieurs à son introduction : calculé à la volée. */
+  trends?: Trends | null;
 };
 
 const fromRepo = raw as unknown as Radar;
@@ -98,7 +106,10 @@ async function latestRadar(): Promise<Radar> {
 const euro = (p: string | null) =>
   p == null ? "—" : `${Number(p).toFixed(2).replace(".", ",")} €`;
 
-const jours = (n: number) => (n <= 1 ? `${n} jour` : `${n} jours`);
+const frDate = (d: string) => d.split("-").reverse().join("/");
+
+const jours = (n: number) =>
+  n <= 0 ? "aujourd'hui" : n === 1 ? "1 jour" : `${n} jours`;
 
 function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
@@ -119,14 +130,9 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle?: string })
  * réellement mesurée.
  */
 function Delta({ r }: { r: Row }) {
-  if (r.is_new) {
-    return (
-      <span className="inline-flex items-center rounded-full bg-indigo-50 px-1.5 py-0.5 text-[11px] font-medium text-indigo-600 whitespace-nowrap">
-        nouveau
-      </span>
-    );
-  }
-  if (r.delta == null) return null;
+  // « nouveau » ne tient pas dans la colonne étroite des flèches : il
+  // débordait sur le titre. Il est affiché sur la ligne de contexte.
+  if (r.is_new || r.delta == null) return null;
   if (r.delta === 0) {
     return (
       <span className="text-[11px] text-slate-300 tabular-nums" title="Rang inchangé depuis hier">
@@ -191,7 +197,7 @@ function ProductRow({
             —
           </span>
         )}
-        <span className="w-7 text-right">{ranked ? <Delta r={r} /> : null}</span>
+        <span className="w-10 text-right">{ranked ? <Delta r={r} /> : null}</span>
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
@@ -209,6 +215,17 @@ function ProductRow({
         </div>
         <p className="text-xs text-slate-400 mt-0.5 truncate">
           {domain} · {jours(r.age_days)}
+          {r.is_new && ranked ? (
+            <>
+              {" · "}
+              <span
+                className="rounded-full bg-indigo-50 px-1.5 py-px font-medium text-indigo-600"
+                title="Absent du scan précédent"
+              >
+                nouveau
+              </span>
+            </>
+          ) : null}
           {status ? <> · {status}</> : null}
         </p>
       </div>
@@ -224,6 +241,153 @@ function More({ hidden, word }: { hidden: number; word: string }) {
       et {hidden} {word}
       {hidden > 1 ? "s" : ""} de plus, non {hidden > 1 ? "affichés" : "affiché"}
     </li>
+  );
+}
+
+/** Montée affichée dans la carte « Produits qui grimpent ». */
+type Climb = {
+  domain: string;
+  title: string;
+  url: string | null;
+  price: string | null;
+  rank: number;
+  from: number;
+  path?: Step[];
+};
+
+/** Trajet d'un produit au fil des scans : « 147 › 148 › 2 ». */
+function Path({ steps }: { steps: Step[] }) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-1 tabular-nums">
+      {steps.map((st, i) => (
+        <span key={st.date} className="inline-flex items-center gap-1">
+          {i > 0 && <span className="text-slate-300">›</span>}
+          <span
+            title={`${frDate(st.date)} : ${st.rank == null ? "absent" : `${st.rank}e`}`}
+            className={
+              i === steps.length - 1 ? "font-semibold text-slate-700" : undefined
+            }
+          >
+            {st.rank ?? "—"}
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function ClimbRow({ c }: { c: Climb }) {
+  const gain = c.from - c.rank;
+  return (
+    <li className="px-4 sm:px-5 py-2.5 flex items-start gap-2.5">
+      <span className="flex items-center gap-1 shrink-0">
+        <Rank n={c.rank} />
+        <span className="w-10 text-right text-[11px] font-medium tabular-nums text-emerald-600 whitespace-nowrap">
+          ▲{gain}
+        </span>
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-2">
+          {c.url ? (
+            <a
+              href={c.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-slate-900 hover:text-indigo-600 hover:underline truncate"
+            >
+              {c.title}
+            </a>
+          ) : (
+            <span className="text-sm font-medium text-slate-900 truncate">
+              {c.title}
+            </span>
+          )}
+          {c.price != null && (
+            <span className="text-sm tabular-nums text-slate-700 shrink-0">
+              {euro(c.price)}
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-slate-400 mt-0.5 truncate">
+          {c.domain} ·{" "}
+          <span className="text-emerald-600 font-medium">
+            {c.from}e → {c.rank}
+            {c.rank === 1 ? "er" : "e"} des ventes
+          </span>
+          {c.path && c.path.length > 2 && (
+            <>
+              {" · trajet "}
+              <Path steps={c.path} />
+            </>
+          )}
+        </p>
+      </div>
+    </li>
+  );
+}
+
+/**
+ * Le Top 3 à essayer : la conclusion de la page, posée avant le détail. Chaque
+ * choix dit pourquoi, et ce qui pourrait le démentir.
+ */
+function TopPicks({ trends }: { trends: Trends }) {
+  const { picks, dates } = trends;
+  const span =
+    dates.length > 1
+      ? `${dates.length} scans, du ${frDate(dates[0])} au ${frDate(dates[dates.length - 1])}`
+      : "un seul scan";
+  return (
+    <Card className="overflow-hidden">
+      <SectionTitle
+        title="Top 3 à essayer sur ta boutique"
+        subtitle={`D'après ${span} — progression au classement, rang atteint, fraîcheur et tenue dans le temps`}
+      />
+      {picks.length === 0 ? (
+        <p className="px-5 py-8 text-sm text-slate-400 text-center">
+          {dates.length < 2
+            ? "Il faut au moins deux scans pour voir qui se met à vendre."
+            : "Aucun produit ne se détache nettement pour l'instant — mieux vaut ça qu'une fausse piste."}
+        </p>
+      ) : (
+        <ol className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+          {picks.map((p, i) => (
+            <li key={p.url} className="p-4 sm:p-5 flex flex-col gap-2 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="grid place-items-center w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-bold">
+                  {i + 1}
+                </span>
+                <span className="text-sm tabular-nums text-slate-700">
+                  {euro(p.price)}
+                </span>
+              </div>
+              <a
+                href={p.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-semibold text-slate-900 hover:text-indigo-600 hover:underline line-clamp-2"
+              >
+                {p.title}
+              </a>
+              <p className="text-xs text-slate-400">
+                {p.domain} ·{" "}
+                {p.age_days <= 0
+                  ? "mis en ligne aujourd'hui"
+                  : `en ligne depuis ${jours(p.age_days)}`}
+              </p>
+              {p.path.length > 1 && (
+                <p className="text-xs text-slate-400">
+                  Rang au fil des scans : <Path steps={p.path} />
+                </p>
+              )}
+              <p className="text-sm text-slate-600 leading-snug">{p.why}</p>
+              {p.caution && (
+                <p className="text-xs text-amber-600">{p.caution}</p>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+    </Card>
   );
 }
 
@@ -250,31 +414,33 @@ export default async function RadarPage() {
         (a.r.selling ? a.r.rank - b.r.rank : a.r.age_days - b.r.age_days),
     );
   const scanned = ok.reduce((n, s) => n + (s.n_products ?? 0), 0);
-  // Toutes les categories de mouvement, pas seulement les hausses : une baisse
-  // ou une sortie de la zone de vente dit quelque chose, elle aussi.
-  const movers = ok.flatMap((s) => [
-    ...(s.movements?.first_sale ?? []).map((m) => ({ m, s, kind: "first" as const })),
-    ...(s.movements?.climbing ?? []).map((m) => ({ m, s, kind: "climb" as const })),
-    ...(s.movements?.new_products ?? []).map((m) => ({ m, s, kind: "new" as const })),
-    ...(s.movements?.falling ?? []).map((m) => ({ m, s, kind: "fall" as const })),
-    ...(s.movements?.dropped_out ?? []).map((m) => ({ m, s, kind: "out" as const })),
-  ]);
-  // Le plus parlant d'abord : une premiere vente vaut mieux qu'une place
-  // perdue, et a categorie egale c'est l'ampleur du mouvement qui tranche.
-  // Un produit qui entre au classement SOUS la zone de vente passe en dernier :
-  // c'est le signal le plus faible, et la carte Nouveautes le montre deja.
-  const priority = (x: { m: Move; kind: string }) =>
-    x.kind === "first" ? 0
-    : x.kind === "climb" ? 1
-    : x.kind === "new" ? (x.m.selling ? 2 : 5)
-    : x.kind === "fall" ? 3
-    : 4;
-  movers.sort(
-    (a, b) =>
-      priority(a) - priority(b) ||
-      Math.abs(b.m.delta ?? 0) - Math.abs(a.m.delta ?? 0) ||
-      a.m.rank - b.m.rank,
-  );
+  // Lecture de l'historique : stockée avec le rapport, recalculée à la volée
+  // pour les rapports produits avant qu'elle n'existe.
+  const trends =
+    radar.trends ??
+    (await loadTrends(
+      ok.map((s) => s.domain),
+      radar.date,
+    ));
+  // Seules les montées franches comptent : un produit qui glisse d'une place
+  // en 99e position ne dit rien, un bond de 148e à 2e dit qu'il se vend. Sans
+  // historique en base, on retombe sur les mouvements du rapport, même filtre.
+  const climbs: Climb[] = trends
+    ? trends.climbers.map((t) => ({ ...t, from: t.prev! }))
+    : ok
+        .flatMap((s) =>
+          [...(s.movements?.first_sale ?? []), ...(s.movements?.climbing ?? [])]
+            .filter((m) => isRealClimb(m.from, m.rank))
+            .map((m) => ({
+              domain: s.domain,
+              title: m.title,
+              url: m.h ? `https://${s.domain}/products/${m.h}` : null,
+              price: null,
+              rank: m.rank,
+              from: m.from,
+            })),
+        )
+        .sort((a, b) => a.rank / a.from - b.rank / b.from);
   // Toutes ces listes sont des classements : au-dela des dix premieres lignes,
   // on ne lit plus un signal, on fait defiler. Ce qui est coupe est annonce.
   const LIST_MAX = 10;
@@ -284,10 +450,9 @@ export default async function RadarPage() {
   );
   const strongTop = strongSorted.slice(0, LIST_MAX);
   const watchTop = watch.slice(0, LIST_MAX);
-  const moversShown = movers.slice(0, LIST_MAX);
+  const climbsShown = climbs.slice(0, LIST_MAX);
   // Date de reference du diff : la meme pour tous les sites en pratique.
   const comparedTo = ok.find((s) => s.compared_to)?.compared_to ?? null;
-  const frDate = (d: string) => d.split("-").reverse().join("/");
   const failed = sites.length - ok.length;
 
   return (
@@ -304,6 +469,8 @@ export default async function RadarPage() {
         </div>
         <RadarScan />
       </div>
+
+      {trends && <TopPicks trends={trends} />}
 
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
         <StatCard
@@ -378,87 +545,26 @@ export default async function RadarPage() {
           )}
         </Card>
 
-        {/* ---- Ce qui a bougé depuis la veille ---- */}
+        {/* ---- Ce qui grimpe depuis le dernier scan ---- */}
         {comparedTo && (
           <Card className="overflow-hidden">
             <SectionTitle
-              title="Mouvements depuis le dernier scan"
-              subtitle={`Progression réelle au classement, comparée au ${frDate(comparedTo)}`}
+              title="Produits qui grimpent"
+              subtitle={`Gros bonds au classement des ventes depuis le ${frDate(comparedTo)} — la preuve qu'ils se vendent`}
             />
-            {movers.length === 0 ? (
+            {climbs.length === 0 ? (
               <p className="px-5 py-8 text-sm text-slate-400 text-center">
-                Aucun changement de rang depuis le dernier scan.
+                Aucune montée franche depuis le dernier scan. Les petits
+                glissements de rang ne sont pas affichés.
               </p>
             ) : (
               <ul className="divide-y divide-slate-200">
-                {moversShown.map(({ m, s, kind }) => (
-                  <li
-                    key={s.domain + kind + m.title}
-                    className="px-4 sm:px-5 py-2.5"
-                  >
-                    {/* Le handle manque sur les rapports produits avant qu'il
-                        ne soit exporté : on retombe alors sur du texte simple. */}
-                    {m.h ? (
-                      <a
-                        href={`https://${s.domain}/products/${m.h}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm font-medium text-slate-900 hover:text-indigo-600 hover:underline block truncate"
-                      >
-                        {m.title}
-                      </a>
-                    ) : (
-                      <p className="text-sm font-medium text-slate-900 truncate">
-                        {m.title}
-                      </p>
-                    )}
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {s.domain} ·{" "}
-                      {kind === "first" ? (
-                        <span className="text-emerald-600 font-medium">
-                          première vente détectée — entre au rang {m.rank}
-                        </span>
-                      ) : kind === "climb" ? (
-                        <span className="text-emerald-600 font-medium">
-                          ▲ {m.from} → {m.rank} ({m.delta} place
-                          {(m.delta ?? 0) > 1 ? "s" : ""} gagnée
-                          {(m.delta ?? 0) > 1 ? "s" : ""})
-                        </span>
-                      ) : kind === "fall" ? (
-                        <>
-                          ▼ {m.from} → {m.rank} ({Math.abs(m.delta ?? 0)} place
-                          {Math.abs(m.delta ?? 0) > 1 ? "s" : ""} perdue
-                          {Math.abs(m.delta ?? 0) > 1 ? "s" : ""})
-                        </>
-                      ) : kind === "new" ? (
-                        // « Entre au rang 3 » ne veut rien dire seul : sur une
-                        // boutique où deux produits vendent, le rang 3 est déjà
-                        // hors zone de vente. On le dit.
-                        m.selling ? (
-                          <span className="text-emerald-600 font-medium">
-                            entre au classement au rang {m.rank} —{" "}
-                            <strong>dans la zone de vente</strong>
-                          </span>
-                        ) : m.selling === false ? (
-                          <>
-                            entre au classement au rang {m.rank} — sous la zone
-                            de vente, pas encore de vente
-                          </>
-                        ) : (
-                          <>
-                            entre au classement au rang {m.rank} — zone de vente
-                            non mesurable sur cette boutique
-                          </>
-                        )
-                      ) : (
-                        `sorti de la zone de vente · ${m.from} → ${m.rank}`
-                      )}
-                    </p>
-                  </li>
+                {climbsShown.map((c) => (
+                  <ClimbRow key={c.domain + c.title} c={c} />
                 ))}
                 <More
-                  hidden={movers.length - moversShown.length}
-                  word="mouvement"
+                  hidden={climbs.length - climbsShown.length}
+                  word="montée"
                 />
               </ul>
             )}

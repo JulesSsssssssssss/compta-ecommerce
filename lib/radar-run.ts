@@ -13,6 +13,7 @@ import {
   type SiteReport,
   type Snapshot,
 } from "./radar-scan";
+import { loadTrends } from "./radar-trends";
 
 /**
  * Pilotage d'un scan lancé depuis l'application.
@@ -200,12 +201,19 @@ async function finish(
   results: SiteReport[],
 ): Promise<ScanState> {
   const day = today();
+  // Calculé une fois par scan plutôt qu'à chaque affichage : l'historique pèse
+  // plusieurs mégaoctets, la page n'a besoin que de sa lecture.
+  const trends = await loadTrends(
+    results.filter((s) => !s.error).map((s) => s.domain),
+    day,
+  );
   const report: Report = {
     date: day,
     generated_at: localTimestamp(),
     n_sites: domains.length,
     n_strong: results.reduce((n, s) => n + (s.strong?.length ?? 0), 0),
     sites: results,
+    trends,
   };
   const payload = JSON.stringify(report);
   await prisma.radarReport.upsert({

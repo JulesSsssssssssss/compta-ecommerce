@@ -11,6 +11,8 @@
  * lancé depuis l'application, à la demande, sans attendre le passage de 20h.
  */
 
+import type { Trends } from "./radar-trends";
+
 /** Fenêtre « nouveauté », en jours. */
 export const FRESH_DAYS = 7;
 /** Plafond de nouveautés par site : une boutique neuve noierait la carte. */
@@ -103,6 +105,8 @@ export type Report = {
   n_sites: number;
   n_strong: number;
   sites: SiteReport[];
+  /** Lecture de l'historique des scans : montées franches et Top 3. */
+  trends?: Trends | null;
 };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
