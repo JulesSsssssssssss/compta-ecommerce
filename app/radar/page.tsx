@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import raw from "@/data/radar.json";
 import { Card, StatCard } from "@/app/components/ui";
 import { RadarScan } from "@/app/components/RadarScan";
@@ -467,7 +468,17 @@ export default async function RadarPage() {
             candidats au lancement.
           </p>
         </div>
-        <RadarScan />
+        <div className="flex flex-col gap-2 w-full sm:w-72 shrink-0">
+          <RadarScan />
+          {/* Avontti tourne sur SHOPLINE et derrière Cloudflare : le scan
+              générique ne le lit pas, il a sa propre page. */}
+          <Link
+            href="/radar/avontti"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-white px-4 py-2.5 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-50"
+          >
+            Scan exclusif Avontti →
+          </Link>
+        </div>
       </div>
 
       {trends && <TopPicks trends={trends} />}
