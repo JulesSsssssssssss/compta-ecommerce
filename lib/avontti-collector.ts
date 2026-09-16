@@ -142,7 +142,8 @@ const SOURCE = String.raw`(async function () {
     say("Liste des fiches… page " + page);
     var html;
     try { html = await get(location.origin + prefix + "/collections/all?page_num=" + page + "&page_size=48"); } catch (e) { break; }
-    var before = handles.size, re = /\/products\/([^"'?#\/\\\s<>]+)/g, m;
+    // « & » exclu : un handle avec apostrophe arrive encodé en &#39; dans le HTML.
+    var before = handles.size, re = /\/products\/([^"'?#&\/\\\s<>]+)/g, m;
     while ((m = re.exec(html))) {
       var h; try { h = decodeURIComponent(m[1]); } catch (e) { h = m[1]; }
       if (h && h.length < 200) handles.add(h);
@@ -202,6 +203,8 @@ const SOURCE = String.raw`(async function () {
   var nv = ok.reduce(function (n, p) { return n + p.variants.length; }, 0);
   var payload = { v: 1, scanned_at: new Date().toISOString(), products: products };
   var json = JSON.stringify(payload);
+  // Laissé sur la page : lisible depuis la console si l'envoi échoue.
+  window.__avonttiScan = payload;
   var summary = ok.length + "/" + list.length + " fiches lues, " + nv + " variantes" + (fromSite ? "" : " (liste des fiches reprise de l'app)");
 
   // 3. Envoi à l'application.
