@@ -6,11 +6,14 @@ import { AvonttiCatalog, type CatalogRow } from "@/app/components/AvonttiCatalog
 import {
   BASELINE_AT,
   BASELINE_FEED,
+  currentPace,
   diffScans,
   knownHandles,
   loadScans,
   type Diff,
+  type Pace,
   type ProductView,
+  type ScanView,
 } from "@/lib/avontti";
 
 // Un relevé peut arriver à tout moment depuis avontti.com.
@@ -140,7 +143,7 @@ function Period({ diff }: { diff: Diff }) {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-slate-900 truncate">{m.t}</p>
                 <p className="text-xs text-slate-400">
-                  {eur(m.price)} · {m.perDay.toFixed(1).replace(".", ",")} / jour
+                  {m.price ? eur(m.price) : "prix non relevé"} · {m.perDay.toFixed(1).replace(".", ",")} / jour
                   {m.isNew && <span className="text-emerald-600"> · nouvelle fiche</span>}
                   {m.restock && <span className="text-amber-600"> · réassort : plancher</span>}
                 </p>
@@ -153,6 +156,25 @@ function Period({ diff }: { diff: Diff }) {
           ))}
         </ul>
       )}
+      {(diff.orders > 0 || diff.removed.length > 0) && (
+        <div className="px-4 sm:px-5 py-2.5 text-xs text-slate-500 border-t border-slate-200 space-y-1">
+          {diff.orders > 0 && (
+            <p>
+              <b className="text-slate-700">≥ {fmt(diff.orders)} commandes</b> sur la période (
+              {fmt(diff.orders / diff.days)} / jour), d&apos;après les assurances colis vendues — un
+              plancher : toutes les commandes ne la prennent pas. Non comptées dans les unités.
+            </p>
+          )}
+          {diff.removed.length > 0 && (
+            <p>
+              <b className="text-slate-700">{diff.removed.length} fiche{diff.removed.length > 1 ? "s" : ""} retirée
+              {diff.removed.length > 1 ? "s" : ""}</b> du site depuis le {when(diff.from.at)} :{" "}
+              {diff.removed.slice(0, 6).join(", ")}
+              {diff.removed.length > 6 && `… (+${diff.removed.length - 6})`}.
+            </p>
+          )}
+        </div>
+      )}
       {restocks.length > 0 && (
         <p className="px-4 sm:px-5 py-2.5 text-xs text-amber-700 bg-amber-50/60 border-t border-slate-200">
           Réassort détecté sur {restocks.length} produit{restocks.length > 1 ? "s" : ""} : les ventes couvertes
@@ -163,12 +185,163 @@ function Period({ diff }: { diff: Diff }) {
   );
 }
 
+const perDay = (n: number) => n.toFixed(1).replace(".", ",");
+const shortTitle = (t: string) => t.replace(/\s*[(（].*$/, "");
+
+/** Rythme des ventes sur la dernière semaine, avec la tendance par produit. */
+function Pulse({ pace }: { pace: Pace }) {
+  const { window: w, previous, items } = pace;
+  const arrow = {
+    up: <span className="text-emerald-600">▲ accélère</span>,
+    down: <span className="text-orange-700">▼ ralentit</span>,
+    new: <span className="text-emerald-600">● s&apos;y met</span>,
+    flat: null,
+  } as const;
+  return (
+    <Card className="overflow-hidden">
+      <SectionTitle
+        title="Signal 1 — le rythme réel des ventes"
+        subtitle={`Stock relevé le ${when(w.from.at)} puis le ${when(w.to.at)}, soit ${days(w.days)}${
+          previous ? ` · tendance comparée aux ${days(previous.days)} d'avant` : ""
+        }`}
+      />
+      {items.length === 0 ? (
+        <p className="px-5 py-8 text-sm text-slate-400 text-center">Aucune vente mesurée sur la période.</p>
+      ) : (
+        <ul className="divide-y divide-slate-100">
+          {items.slice(0, 8).map((m) => (
+            <li key={m.h} className="px-4 sm:px-5 py-2 grid grid-cols-[minmax(0,1fr)_auto] gap-3 items-baseline text-sm">
+              <span className="min-w-0">
+                <span className="block truncate font-medium text-slate-800">{m.t}</span>
+                <span className="text-xs text-slate-400">
+                  {fmt(m.units)} unités
+                  {m.before != null && ` · ${perDay(m.before)} / jour avant`}
+                  {arrow[m.trend] && <> · {arrow[m.trend]}</>}
+                </span>
+              </span>
+              <b className="tabular-nums">{perDay(m.perDay)} / j</b>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="px-4 sm:px-5 py-2.5 border-t border-slate-200 flex justify-between gap-3 text-sm">
+        <span className="text-slate-600">
+          {fmt(w.units)} articles en {days(w.days)}
+          {w.orders > 0 && ` · ≥ ${fmt(w.orders / w.days)} commandes / jour`}
+        </span>
+        <b className="tabular-nums">≈ {fmt(w.units / w.days)} / jour</b>
+      </div>
+    </Card>
+  );
+}
+
+/** Le tri natif « Meilleurs vendeurs », comparé au relevé précédent qui l'a lu. */
+function NativeSort({ scans, names }: { scans: ScanView[]; names: Map<string, string> }) {
+  const withBest = scans.filter((s) => s.best);
+  const [now, before] = withBest;
+  const label = (h: string) => names.get(h) ?? h.replace(/-/g, " ");
+  return (
+    <Card className="overflow-hidden">
+      <SectionTitle
+        title="Signal 2 — le tri natif du site"
+        subtitle={
+          now
+            ? `« Meilleurs vendeurs » (?sort_type=2) au ${when(now.at)}${before ? `, comparé au ${when(before.at)}` : ""} — une fenêtre glissante, pas le cumul`
+            : "« Meilleurs vendeurs » (?sort_type=2) est une fenêtre glissante, pas le cumul"
+        }
+      />
+      {!now ? (
+        <p className="px-5 py-8 text-sm text-slate-400 text-center">
+          Le collecteur lit désormais ce tri : il s&apos;affichera au prochain scan.
+        </p>
+      ) : (
+        <ol className="px-4 sm:px-5 py-2">
+          {now.best!.slice(0, 8).map((h, i) => {
+            const was = before?.best?.indexOf(h) ?? -1;
+            const move = !before ? null : was < 0 ? "entrée" : was - i;
+            return (
+              <li key={h}>
+                <Line
+                  label={`${i + 1}. ${shortTitle(label(h))}`}
+                  value={
+                    move === null
+                      ? `${i + 1}e`
+                      : move === "entrée"
+                        ? "nouveau"
+                        : move === 0
+                          ? "="
+                          : `${move > 0 ? "↑" : "↓"} ${Math.abs(move)}`
+                  }
+                  tone={
+                    move === "entrée" || (typeof move === "number" && move > 0)
+                      ? "text-emerald-600"
+                      : typeof move === "number" && move < 0
+                        ? "text-orange-700"
+                        : undefined
+                  }
+                />
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </Card>
+  );
+}
+
+/** Le verdict, recalculé à chaque relevé. */
+function Verdict({ pace }: { pace: Pace }) {
+  const { window: w, items } = pace;
+  const [lead, second] = items;
+  if (!lead) return null;
+  const share = w.units > 0 ? Math.round((lead.units / w.units) * 100) : 0;
+  const risers = items.filter((m) => m.trend === "up" || m.trend === "new").slice(0, 3);
+  const fading = items.filter((m) => m.trend === "down").slice(0, 2);
+  return (
+    <Card className="p-4 sm:p-5 border-t-4 border-t-indigo-600">
+      <p className="text-[11px] uppercase tracking-wider text-slate-500">
+        Verdict au {when(w.to.at)} — ce qui se vend en ce moment
+      </p>
+      <p className="mt-1 text-xl sm:text-2xl font-semibold text-slate-900">{shortTitle(lead.t)}</p>
+      <p className="mt-2 text-sm text-slate-600 max-w-3xl leading-relaxed">
+        {fmt(lead.units)} unités en {days(w.days)}, soit <b className="text-slate-900">{perDay(lead.perDay)} / jour</b>{" "}
+        — {share} % des articles vendus sur la période
+        {lead.before != null && (
+          <>
+            {" "}
+            ({lead.trend === "up" ? "en accélération" : lead.trend === "down" ? "en ralentissement" : "stable"}, contre{" "}
+            {perDay(lead.before)} / jour avant)
+          </>
+        )}
+        .
+        {second && (
+          <>
+            {" "}
+            Derrière : <b className="text-slate-900">{shortTitle(second.t)}</b> à {perDay(second.perDay)} / jour.
+          </>
+        )}
+        {risers.length > 0 && (
+          <>
+            {" "}
+            Ce qui monte : {risers.map((m) => `${shortTitle(m.t)} (${perDay(m.perDay)} / j)`).join(", ")}.
+          </>
+        )}
+        {fading.length > 0 && <> Ce qui s&apos;essouffle : {fading.map((m) => shortTitle(m.t)).join(", ")}.</>}
+      </p>
+    </Card>
+  );
+}
+
 export default async function AvonttiPage() {
   const scans = await loadScans();
   const current = scans[0];
   const previous = scans[1] ?? null;
-  const products = current.products;
+  // L'assurance colis vend à chaque commande : hors classements.
+  const products = current.products.filter((p) => !p.aux);
   const diff = previous ? diffScans(current, previous) : null;
+  const pace = currentPace(scans);
+  const names = new Map<string, string>();
+  for (const s of [...scans].reverse()) for (const p of s.products) names.set(p.h, p.t);
 
   const units = products.reduce((n, p) => n + p.sold, 0);
   const ca = products.reduce((n, p) => n + p.ca, 0);
@@ -309,63 +482,88 @@ export default async function AvonttiPage() {
         </Card>
       </div>
 
-      {/* ---- Lecture du moment, telle que relevée le 15/09 ---- */}
+      {/* ---- Le moment présent, recalculé à chaque relevé ---- */}
       <div>
-        <h2 className="text-lg font-semibold text-slate-900">Ce qui se vendait le 15/09</h2>
+        <h2 className="text-lg font-semibold text-slate-900">
+          Ce qui se vend en ce moment{pace ? ` · au ${when(pace.window.to.at)}` : ""}
+        </h2>
         <p className="text-sm text-slate-500 mt-0.5 max-w-3xl">
-          Le compteur de surventes est cumulé, sans axe temporel : un relevé seul ne se découpe pas
-          par date. Ces deux signaux vivants, relevés le 15 septembre à 17h, donnaient la photo du
-          moment — les relevés de l&apos;app la donnent désormais au chiffre près.
+          Le compteur de surventes est cumulé : c&apos;est l&apos;écart entre deux relevés qui date les ventes.
+          Fenêtre d&apos;environ une semaine, comparée à la précédente pour dire ce qui accélère.
         </p>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
-        <Card className="overflow-hidden">
-          <SectionTitle
-            title="Signal 1 — le flux de commandes réelles"
-            subtitle="Le pop-up « X vient d'acheter » est branché sur les vraies commandes (customCreateTime: null)"
-          />
-          <ul className="divide-y divide-slate-100">
-            {BASELINE_FEED.map((f, i) => (
-              <li key={i} className="px-4 sm:px-5 py-2 grid grid-cols-[3rem_minmax(0,1fr)_auto] gap-2 items-baseline text-sm">
-                <span className="text-xs tabular-nums text-slate-400">{f.t}</span>
-                <span className={`truncate font-medium ${/Kylie/.test(f.p) ? "text-indigo-700" : "text-slate-800"}`}>{f.p}</span>
-                <span className="text-xs text-slate-400 whitespace-nowrap">{f.c}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="px-4 sm:px-5 py-2.5 border-t border-slate-200 flex justify-between text-sm">
-            <span className="text-slate-600">10 commandes en 9,9 h</span>
-            <b className="tabular-nums">≈ 24 / jour</b>
+      {pace ? (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
+            <Pulse pace={pace} />
+            <NativeSort scans={scans} names={names} />
           </div>
+          <Verdict pace={pace} />
+        </>
+      ) : (
+        <Card className="p-5 text-sm text-slate-500">
+          Lance un premier scan : la lecture du moment se calcule à partir de deux relevés.
         </Card>
-        <Card className="overflow-hidden">
-          <SectionTitle
-            title="Signal 2 — le tri natif du site"
-            subtitle="« Meilleurs vendeurs » (?sort_type=2) est une fenêtre glissante, pas le cumul"
-          />
-          <div className="px-4 sm:px-5 py-2">
-            <Line label="Totti Jean" hint="1 vendu, en ligne le 8 sept." value="↑ 2e" tone="text-emerald-600" />
-            <Line label="Tied pants" hint="75 vendus, en ligne en mars" value="↓ 4e" tone="text-orange-700" />
-            <Line label="Kylie Button Top Mahogany" hint="27, 26 août" value="↑ 3e" tone="text-emerald-600" />
-            <Line label="Crochet linen top" hint="42, 20 mai" value="↓ 4e" tone="text-orange-700" />
-            <Line label="Denim mini dress" hint="1, 10 sept." value="↑ 2e" tone="text-emerald-600" />
-            <Line label="Backless maxi dress" hint="2, 11 août" value="↓ 3e" tone="text-orange-700" />
-          </div>
-          <p className="px-4 sm:px-5 pb-4 text-xs text-slate-500">
-            Les six écarts vont dans le même sens : ce qui est récent remonte, ce qui est ancien descend.
+      )}
+
+      <Card className="overflow-hidden">
+        <details>
+          <summary className="px-4 sm:px-5 py-4 cursor-pointer text-sm font-semibold text-slate-900">
+            Teardown initial du 15/09{" "}
+            <span className="font-normal text-xs text-slate-500">— pop-up de commandes, tri natif et verdict d&apos;alors</span>
+          </summary>
+          <div className="p-4 sm:p-5 pt-0 space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
+          <Card className="overflow-hidden">
+            <SectionTitle
+              title="Signal 1 — le flux de commandes réelles"
+              subtitle="Le pop-up « X vient d'acheter » est branché sur les vraies commandes (customCreateTime: null)"
+            />
+            <ul className="divide-y divide-slate-100">
+              {BASELINE_FEED.map((f, i) => (
+                <li key={i} className="px-4 sm:px-5 py-2 grid grid-cols-[3rem_minmax(0,1fr)_auto] gap-2 items-baseline text-sm">
+                  <span className="text-xs tabular-nums text-slate-400">{f.t}</span>
+                  <span className={`truncate font-medium ${/Kylie/.test(f.p) ? "text-indigo-700" : "text-slate-800"}`}>{f.p}</span>
+                  <span className="text-xs text-slate-400 whitespace-nowrap">{f.c}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="px-4 sm:px-5 py-2.5 border-t border-slate-200 flex justify-between text-sm">
+              <span className="text-slate-600">10 commandes en 9,9 h</span>
+              <b className="tabular-nums">≈ 24 / jour</b>
+            </div>
+          </Card>
+          <Card className="overflow-hidden">
+            <SectionTitle
+              title="Signal 2 — le tri natif du site"
+              subtitle="« Meilleurs vendeurs » (?sort_type=2) est une fenêtre glissante, pas le cumul"
+            />
+            <div className="px-4 sm:px-5 py-2">
+              <Line label="Totti Jean" hint="1 vendu, en ligne le 8 sept." value="↑ 2e" tone="text-emerald-600" />
+              <Line label="Tied pants" hint="75 vendus, en ligne en mars" value="↓ 4e" tone="text-orange-700" />
+              <Line label="Kylie Button Top Mahogany" hint="27, 26 août" value="↑ 3e" tone="text-emerald-600" />
+              <Line label="Crochet linen top" hint="42, 20 mai" value="↓ 4e" tone="text-orange-700" />
+              <Line label="Denim mini dress" hint="1, 10 sept." value="↑ 2e" tone="text-emerald-600" />
+              <Line label="Backless maxi dress" hint="2, 11 août" value="↓ 3e" tone="text-orange-700" />
+            </div>
+            <p className="px-4 sm:px-5 pb-4 text-xs text-slate-500">
+              Les six écarts vont dans le même sens : ce qui est récent remonte, ce qui est ancien descend.
+            </p>
+          </Card>
+        </div>
+        <Card className="p-4 sm:p-5 border-t-4 border-t-indigo-600">
+          <p className="text-[11px] uppercase tracking-wider text-slate-500">Verdict du 15/09 — ce qui se vendait</p>
+          <p className="mt-1 text-xl sm:text-2xl font-semibold text-slate-900">Kylie Button Top, Graphite</p>
+          <p className="mt-2 text-sm text-slate-600 max-w-3xl leading-relaxed">
+            6 des 10 dernières commandes · 140 unités en 20 jours, soit <b className="text-slate-900">7,0 / jour</b> —
+            la deuxième meilleure vélocité de la boutique, et la seule qui monte. Le <b className="text-slate-900">Jodie Jeans</b>{" "}
+            reste 1er du tri natif mais n&apos;apparaît dans aucune des 10 dernières commandes : un fond de catalogue
+            qui tourne encore, plus le moteur de croissance. La capsule <b className="text-slate-900">Kylie</b> pèse
+            8 des 10 dernières commandes à elle seule.
           </p>
         </Card>
-      </div>
-      <Card className="p-4 sm:p-5 border-t-4 border-t-indigo-600">
-        <p className="text-[11px] uppercase tracking-wider text-slate-500">Verdict du 15/09 — ce qui se vendait</p>
-        <p className="mt-1 text-xl sm:text-2xl font-semibold text-slate-900">Kylie Button Top, Graphite</p>
-        <p className="mt-2 text-sm text-slate-600 max-w-3xl leading-relaxed">
-          6 des 10 dernières commandes · 140 unités en 20 jours, soit <b className="text-slate-900">7,0 / jour</b> —
-          la deuxième meilleure vélocité de la boutique, et la seule qui monte. Le <b className="text-slate-900">Jodie Jeans</b>{" "}
-          reste 1er du tri natif mais n&apos;apparaît dans aucune des 10 dernières commandes : un fond de catalogue
-          qui tourne encore, plus le moteur de croissance. La capsule <b className="text-slate-900">Kylie</b> pèse
-          8 des 10 dernières commandes à elle seule.
-        </p>
+          </div>
+        </details>
       </Card>
 
       <Card className="overflow-hidden">

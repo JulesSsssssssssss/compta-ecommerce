@@ -153,6 +153,19 @@ const SOURCE = String.raw`(async function () {
   }
   var list = Array.from(handles);
 
+  // Le tri natif « Meilleurs vendeurs » : une fenêtre glissante de ventes,
+  // là où le stock négatif ne donne qu'un cumul. Première page suffit.
+  var best = [];
+  try {
+    say("Tri « Meilleurs vendeurs »…");
+    var bh = await get(location.origin + prefix + "/collections/all?sort_type=2&page_num=1&page_size=48");
+    var reb = /\/products\/([^"'?#&\/\\\s<>]+)/g, mb;
+    while ((mb = reb.exec(bh))) {
+      var hb; try { hb = decodeURIComponent(mb[1]); } catch (e) { hb = mb[1]; }
+      if (hb && hb.length < 200 && best.indexOf(hb) < 0) best.push(hb);
+    }
+  } catch (e) {}
+
   // 2. Chaque fiche, quatre à la fois.
   var products = [], done = 0;
   async function read(h) {
@@ -183,6 +196,9 @@ const SOURCE = String.raw`(async function () {
       // Certains thèmes donnent les prix en centimes : le prix de la fiche fait foi.
       if (cap !== null && p.price && vp && vp / p.price > 50) cap = cap / 100;
       p.cap = cap;
+      // Le meta prix a disparu des fiches : le prix de la variante prend le
+      // relais (en centimes chez SHOPLINE, l'app le ramène en euros).
+      if (p.price == null && vp !== null) p.price = vp;
     } catch (e) {
       p.err = String(e && e.message || e);
     }
@@ -201,7 +217,7 @@ const SOURCE = String.raw`(async function () {
 
   var ok = products.filter(function (p) { return p.variants.length; });
   var nv = ok.reduce(function (n, p) { return n + p.variants.length; }, 0);
-  var payload = { v: 1, scanned_at: new Date().toISOString(), products: products };
+  var payload = { v: 1, scanned_at: new Date().toISOString(), products: products, best: best };
   var json = JSON.stringify(payload);
   // Laissé sur la page : lisible depuis la console si l'envoi échoue.
   window.__avonttiScan = payload;
