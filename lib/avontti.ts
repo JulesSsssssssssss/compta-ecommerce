@@ -124,7 +124,7 @@ const fromCents = (n: number | null | undefined): number | null =>
   n == null ? null : Number.isInteger(n) && n >= 100 ? n / 100 : n;
 
 /** Heure de Paris au format "AAAA-MM-JJTHH:MM". */
-function parisStamp(iso: string): string {
+export function parisStamp(iso: string): string {
   const d = new Date(iso);
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("fr-FR", {

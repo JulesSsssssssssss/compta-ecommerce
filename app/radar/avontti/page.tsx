@@ -10,6 +10,7 @@ import {
   diffScans,
   knownHandles,
   loadScans,
+  parisStamp,
   type Diff,
   type Pace,
   type ProductView,
@@ -100,13 +101,13 @@ function Ranking({ products }: { products: ProductView[] }) {
 }
 
 /** Ce qui s'est vendu entre deux relevés : le vrai chiffre de la période. */
-function Period({ diff }: { diff: Diff }) {
+function Period({ diff, title, day = false }: { diff: Diff; title?: string; day?: boolean }) {
   const top = diff.movements.filter((m) => m.units > 0);
   const restocks = diff.movements.filter((m) => m.restock);
   return (
     <Card className="overflow-hidden">
       <SectionTitle
-        title={`Ventes depuis le relevé du ${when(diff.from.at)}`}
+        title={title ?? `Ventes depuis le relevé du ${when(diff.from.at)}`}
         subtitle={
           diff.exact
             ? `Différence de stock variante par variante sur ${days(diff.days)} — des unités réellement écoulées, sans estimation`
@@ -116,7 +117,8 @@ function Period({ diff }: { diff: Diff }) {
       <div className="grid grid-cols-3 divide-x divide-slate-200 border-b border-slate-200">
         {[
           ["Unités écoulées", fmt(diff.units)],
-          ["Par jour", fmt(diff.units / diff.days)],
+          // Sur quelques heures, un « par jour » extrapolé serait trompeur.
+          day ? ["Durée mesurée", days(diff.days)] : ["Par jour", fmt(diff.units / diff.days)],
           ["CA estimé", kEur(diff.ca)],
         ].map(([k, v]) => (
           <div key={k} className="px-4 sm:px-5 py-3">
@@ -187,6 +189,31 @@ function Period({ diff }: { diff: Diff }) {
 
 const perDay = (n: number) => n.toFixed(1).replace(".", ",");
 const shortTitle = (t: string) => t.replace(/\s*[(（].*$/, "");
+
+/** Heure d'un relevé : "2026-10-10T14:35" → "14h35". */
+const hour = (at: string) => (at.split("T")[1] ?? "").replace(":", "h");
+
+/** En attendant un second scan du jour : dire quoi faire, pas afficher zéro. */
+function TodayPending({ first }: { first: string | null }) {
+  return (
+    <Card className="overflow-hidden">
+      <SectionTitle title="Ventes du jour" />
+      <p className="px-4 sm:px-5 py-5 text-sm text-slate-500">
+        {first ? (
+          <>
+            Un seul scan aujourd&apos;hui, à <b className="text-slate-700">{hour(first)}</b>. Relance un scan plus
+            tard : cette carte affichera tout ce qui s&apos;est vendu depuis.
+          </>
+        ) : (
+          <>
+            Aucun scan aujourd&apos;hui. Fais-en un le matin et un le soir : cette carte affichera les ventes de la
+            journée entre les deux.
+          </>
+        )}
+      </p>
+    </Card>
+  );
+}
 
 /** Rythme des ventes sur la dernière semaine, avec la tendance par produit. */
 function Pulse({ pace }: { pace: Pace }) {
@@ -340,6 +367,12 @@ export default async function AvonttiPage() {
   const products = current.products.filter((p) => !p.aux);
   const diff = previous ? diffScans(current, previous) : null;
   const pace = currentPace(scans);
+  // Ventes du jour : du premier au dernier scan de la journée (heure de
+  // Paris), quel que soit le nombre de scans faits entre les deux.
+  const todayParis = parisStamp(new Date().toISOString()).slice(0, 10);
+  const todays = scans.filter((s) => !s.isBaseline && s.at.startsWith(todayParis));
+  const firstToday = todays.at(-1) ?? null;
+  const dayDiff = todays.length >= 2 ? diffScans(todays[0], firstToday!) : null;
   const names = new Map<string, string>();
   for (const s of [...scans].reverse()) for (const p of s.products) names.set(p.h, p.t);
 
@@ -431,7 +464,19 @@ export default async function AvonttiPage() {
         />
       </div>
 
-      {diff && <Period diff={diff} />}
+      {dayDiff ? (
+        <Period
+          diff={dayDiff}
+          day
+          title={`Ventes du jour — de ${hour(firstToday!.at)} à ${hour(todays[0].at)} (${todays.length} scans)`}
+        />
+      ) : (
+        <TodayPending first={firstToday?.at ?? null} />
+      )}
+
+      {/* Avec deux scans aujourd'hui, la période et la journée sont la même
+          comparaison : inutile de l'afficher deux fois. */}
+      {diff && todays.length !== 2 && <Period diff={diff} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
         <Card className="overflow-hidden">
