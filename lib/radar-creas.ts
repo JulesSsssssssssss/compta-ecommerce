@@ -193,6 +193,13 @@ export function tiktokSearchUrl(query: string): string {
   return `https://www.tiktok.com/search/video?q=${encodeURIComponent(query)}`;
 }
 
+/** Bibliothèque de publicités TikTok, filtrée sur le nom de l'annonceur : les
+ *  annonces réellement diffusées en Europe, avec leurs dates et leur audience.
+ *  Vide si la boutique annonce sous un autre nom de société. */
+export function tiktokAdsUrl(advertiser: string): string {
+  return `https://library.tiktok.com/ads?region=all&adv_name=${encodeURIComponent(advertiser)}&query_type=1&sort_type=last_shown_date,desc`;
+}
+
 /** Nom de marque lisible tiré du domaine : « fr.gianoria.com » -> « gianoria ». */
 export function brandFromDomain(domain: string): string {
   const parts = domain.toLowerCase().split(".");

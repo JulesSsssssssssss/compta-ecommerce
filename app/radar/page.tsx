@@ -5,7 +5,12 @@ import { Card, StatCard } from "@/app/components/ui";
 import { RadarScan } from "@/app/components/RadarScan";
 import { prisma } from "@/lib/prisma";
 import { addRadarSite, removeRadarSite } from "@/lib/radar-actions";
-import { brandFromDomain, findCreas, tiktokSearchUrl } from "@/lib/radar-creas";
+import {
+  brandFromDomain,
+  findCreas,
+  tiktokAdsUrl,
+  tiktokSearchUrl,
+} from "@/lib/radar-creas";
 import {
   isRealClimb,
   loadTrends,
@@ -412,6 +417,15 @@ async function PickCreas({
           className={link}
         >
           vidéos du produit
+        </a>
+        {" · "}
+        <a
+          href={tiktokAdsUrl(brand)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={link}
+        >
+          pubs de la boutique
         </a>
         {creas.tiktok && (
           <>
