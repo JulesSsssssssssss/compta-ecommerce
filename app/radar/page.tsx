@@ -1,10 +1,11 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import raw from "@/data/radar.json";
 import { Card, StatCard } from "@/app/components/ui";
 import { RadarScan } from "@/app/components/RadarScan";
 import { prisma } from "@/lib/prisma";
 import { addRadarSite, removeRadarSite } from "@/lib/radar-actions";
+import { brandFromDomain, findCreas, tiktokSearchUrl } from "@/lib/radar-creas";
 import {
   isRealClimb,
   loadTrends,
@@ -327,6 +328,109 @@ function ClimbRow({ c }: { c: Climb }) {
   );
 }
 
+/** Nombre de vignettes montrées par produit ; le reste est annoncé. */
+const CREAS_MAX = 4;
+
+/**
+ * Les créas d'un produit du Top 3 : les vidéos que la boutique affiche sur sa
+ * fiche, puis de quoi les recouper sur TikTok. Lu à l'affichage, hors du
+ * rapport : une fiche change plus vite qu'un classement.
+ */
+async function PickCreas({
+  url,
+  title,
+  domain,
+}: {
+  url: string;
+  title: string;
+  domain: string;
+}) {
+  const creas = await findCreas(url);
+  const brand = brandFromDomain(domain);
+  const shown = creas.videos.slice(0, CREAS_MAX);
+  const hidden = creas.videos.length - shown.length;
+  const link = "text-indigo-600 hover:underline";
+  return (
+    <div className="mt-1 pt-3 border-t border-slate-100 space-y-2">
+      <p className="text-xs font-medium text-slate-700">
+        {creas.error
+          ? "Créas : fiche illisible pour l'instant"
+          : creas.videos.length === 0
+            ? "Aucune vidéo sur la fiche"
+            : `${creas.videos.length} vidéo${creas.videos.length > 1 ? "s" : ""} sur la fiche`}
+      </p>
+      {shown.length > 0 && (
+        <ul className="flex gap-1.5">
+          {shown.map((v, i) => (
+            <li key={v.src} className="w-12 shrink-0">
+              <a
+                href={v.src}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Ouvrir la vidéo ${i + 1}`}
+                className="block aspect-[9/16] rounded-md overflow-hidden bg-slate-100 ring-1 ring-slate-200 hover:ring-indigo-400"
+              >
+                {v.poster ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={v.poster}
+                    alt={`Vidéo ${i + 1} de la fiche`}
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="grid place-items-center w-full h-full text-xs text-slate-400">
+                    ▶
+                  </span>
+                )}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {(hidden > 0 || creas.shared > 0 || (!creas.checked && creas.videos.length > 0)) && (
+        <p className="text-xs text-slate-400">
+          {[
+            hidden > 0 ? `${hidden} de plus sur la fiche` : null,
+            creas.shared > 0
+              ? `${creas.shared} vidéo${creas.shared > 1 ? "s" : ""} de marque écartée${creas.shared > 1 ? "s" : ""} (sur toutes les fiches)`
+              : null,
+            !creas.checked && creas.videos.length > 0
+              ? "non comparé aux autres fiches : peut inclure des vidéos de marque"
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      )}
+      <p className="text-xs text-slate-400">
+        {creas.videos.length > 0 ? "À recouper" : "À chercher"} sur TikTok :{" "}
+        <a
+          href={tiktokSearchUrl(`${brand} ${title}`)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={link}
+        >
+          vidéos du produit
+        </a>
+        {creas.tiktok && (
+          <>
+            {" · "}
+            <a
+              href={creas.tiktok}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={link}
+            >
+              compte de la boutique
+            </a>
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
 /**
  * Le Top 3 à essayer : la conclusion de la page, posée avant le détail. Chaque
  * choix dit pourquoi, et ce qui pourrait le démentir.
@@ -384,6 +488,15 @@ function TopPicks({ trends }: { trends: Trends }) {
               {p.caution && (
                 <p className="text-xs text-amber-600">{p.caution}</p>
               )}
+              <Suspense
+                fallback={
+                  <p className="mt-1 pt-3 border-t border-slate-100 text-xs text-slate-400">
+                    Recherche des créas sur la fiche…
+                  </p>
+                }
+              >
+                <PickCreas url={p.url} title={p.title} domain={p.domain} />
+              </Suspense>
             </li>
           ))}
         </ol>
