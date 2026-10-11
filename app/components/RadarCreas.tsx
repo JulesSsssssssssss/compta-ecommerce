@@ -26,6 +26,80 @@ const count = (n: number) =>
 /** "2026-10-11T16:33:00Z" ou "2026-10-11" -> "11/10" */
 const day = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
+/** Avec l'année : les vidéos retenues s'étalent souvent sur plus d'un an. */
+const fullDay = (iso: string) => `${day(iso)}/${iso.slice(2, 4)}`;
+
+/** 2300000 -> "2 300 000". Écrit à la main : le serveur et le navigateur
+ *  doivent rendre exactement la même chaîne. */
+const exact = (n: number) =>
+  String(Math.round(n)).replace(/\B(?=(\d{3})+$)/g, "\u202f");
+
+/**
+ * Le Top 5 d'une recherche approfondie : une ligne de chiffres par vidéo, puis
+ * ce qu'elle est pour ce produit. En version `compact`, sous la ligne d'un
+ * produit, le détail de ce qu'il faut en reprendre reste dans le « + ».
+ */
+export function DeepPicks({ deep, compact = false }: { deep: Deep; compact?: boolean }) {
+  const num = "py-0.5 pl-3 text-right tabular-nums whitespace-nowrap";
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-slate-700">
+        Top {deep.picks.length} des vidéos à plus fort potentiel
+        {deep.doneAt && (
+          <span className="font-normal text-slate-400">
+            {" "}
+            · recherche du {day(deep.doneAt)}
+          </span>
+        )}
+      </p>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-slate-400">
+            <th className="w-6" />
+            <th className="py-0.5 text-left font-normal">Vidéo</th>
+            <th className={`${num} font-normal`}>Vues</th>
+            <th className={`${num} font-normal`}>Likes</th>
+            <th className={`${num} font-normal`}>Date</th>
+          </tr>
+        </thead>
+        {deep.picks.map((p, i) => (
+          <tbody key={p.url} className="align-top">
+            <tr>
+              <td className="py-0.5 text-slate-400 tabular-nums">{i + 1}</td>
+              <td className="py-0.5 max-w-0 w-full truncate">
+                <a href={p.url} {...outside} className={`${link} font-medium`}>
+                  {p.creator}
+                </a>
+              </td>
+              <td className={`${num} text-slate-700`}>
+                {p.views != null ? exact(p.views) : "—"}
+              </td>
+              <td className={`${num} text-slate-700`}>
+                {p.likes != null ? exact(p.likes) : "—"}
+              </td>
+              <td className={`${num} text-slate-400`}>
+                {p.date ? fullDay(p.date) : "—"}
+              </td>
+            </tr>
+            {(p.label || !compact) && (
+              <tr>
+                <td />
+                <td colSpan={4} className="pb-1.5 leading-snug">
+                  {p.label && <span className="text-slate-500">{p.label}</span>}
+                  {!compact && (
+                    <span className="block text-slate-600">{p.why}</span>
+                  )}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        ))}
+      </table>
+      {!compact && deep.note && <p className="text-xs text-amber-600">{deep.note}</p>}
+    </div>
+  );
+}
+
 /**
  * La recherche approfondie d'un produit : le bouton qui la demande, puis le
  * Top 5 une fois qu'elle a été traitée. Elle passe par un navigateur connecté
@@ -60,45 +134,7 @@ function DeepSearch({
   const waiting = deep?.status === "pending";
   return (
     <div className="space-y-2">
-      {deep && deep.picks.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium text-slate-700">
-            Top {deep.picks.length} des vidéos à plus fort potentiel
-            {deep.doneAt && (
-              <span className="font-normal text-slate-400">
-                {" "}
-                · recherche du {day(deep.doneAt)}
-              </span>
-            )}
-          </p>
-          <ol className="space-y-1.5">
-            {deep.picks.map((p, i) => (
-              <li key={p.url} className="flex gap-2 text-xs">
-                <span className="grid place-items-center w-5 h-5 shrink-0 rounded-full bg-slate-100 text-slate-600 font-medium tabular-nums">
-                  {i + 1}
-                </span>
-                <div className="min-w-0">
-                  <a href={p.url} {...outside} className={`${link} font-medium`}>
-                    {p.creator}
-                  </a>
-                  <span className="text-slate-400">
-                    {[
-                      p.views != null ? `${count(p.views)} vues` : null,
-                      p.likes != null ? `${count(p.likes)} likes` : null,
-                      p.date ? day(p.date) : null,
-                    ]
-                      .filter(Boolean)
-                      .map((s) => ` · ${s}`)
-                      .join("")}
-                  </span>
-                  <p className="text-slate-600 leading-snug">{p.why}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-          {deep.note && <p className="text-xs text-amber-600">{deep.note}</p>}
-        </div>
-      )}
+      {deep && deep.picks.length > 0 && <DeepPicks deep={deep} />}
       {deep?.status === "done" && deep.picks.length === 0 && (
         <p className="text-xs text-slate-400">
           Recherche du {deep.doneAt ? day(deep.doneAt) : "—"} : aucune vidéo
@@ -233,10 +269,13 @@ export function CreasToggle({
   url,
   title,
   domain,
+  deep = null,
 }: {
   url: string;
   title: string;
   domain: string;
+  /** Recherche approfondie déjà traitée : son Top 5 se montre sans cliquer. */
+  deep?: Deep | null;
 }) {
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<{ creas: Creas; deep: Deep | null } | null>(null);
@@ -270,6 +309,11 @@ export function CreasToggle({
         </span>
         créas
       </button>
+      {!open && deep && (
+        <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2.5">
+          <DeepPicks deep={data?.deep?.picks.length ? data.deep : deep} compact />
+        </div>
+      )}
       {open && (
         <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2.5">
           {pending && !data ? (

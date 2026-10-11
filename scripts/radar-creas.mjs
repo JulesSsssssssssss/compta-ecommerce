@@ -8,7 +8,7 @@
  * `pending` liste les demandes en attente. `save` dépose un résultat :
  *   { "url": "<fiche produit, telle que listée par pending>",
  *     "note": "ce que la recherche n'a pas pu établir, ou null",
- *     "picks": [ { "url", "creator", "likes", "views", "date", "why" } ] }
+ *     "picks": [ { "url", "creator", "likes", "views", "date", "label", "why" } ] }
  *
  * Méthode pour remplir `picks` (5 vidéos au plus), avec Chrome connecté à
  * TikTok :
@@ -19,8 +19,10 @@
  *      propres comptes, mention « Collaboration commerciale » ;
  *   4. à défaut, vidéos du même type de produit qui ont le mieux marché.
  * Retenir sur l'audience, la fraîcheur et ce qui est reproductible (accroche,
- * format), et dire dans `why` si la vidéo est une créa confirmée de la
- * boutique ou une vidéo proche proposée faute de mieux.
+ * format). `label` dit en quelques mots ce qu'est la vidéo pour ce produit —
+ * « Créa confirmée de la boutique », « Pub de la marque d'origine », « Vidéo
+ * proche » : la page l'affiche à côté des chiffres. `why` détaille quoi en
+ * reprendre.
  *
  * Sans TURSO_DATABASE_URL, le script vise la base locale prisma/dev.db.
  */
@@ -67,6 +69,7 @@ if (cmd === "pending") {
       likes: Number.isFinite(p.likes) ? p.likes : null,
       views: Number.isFinite(p.views) ? p.views : null,
       date: typeof p.date === "string" ? p.date : null,
+      label: typeof p.label === "string" && p.label.trim() ? p.label.trim().slice(0, 80) : null,
       why: p.why,
     };
   });

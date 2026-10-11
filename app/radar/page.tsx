@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { addRadarSite, removeRadarSite } from "@/lib/radar-actions";
 import { CreasToggle, CreasView } from "@/app/components/RadarCreas";
 import { findCreas } from "@/lib/radar-creas";
-import { loadDeep } from "@/lib/radar-deep";
+import { doneDeep, loadDeep } from "@/lib/radar-deep";
 import { RadarAdsWatch } from "@/app/components/RadarAdsWatch";
 import { SESSION_MINUTES, loadSessions } from "@/lib/radar-ads";
 import {
@@ -176,6 +176,24 @@ function Rank({ n }: { n: number }) {
 }
 
 /**
+ * Le « + » d'une ligne, avec le Top 5 de sa recherche approfondie quand elle a
+ * déjà été traitée : le résultat se lit sans avoir à déplier.
+ */
+async function RowCreas({
+  url,
+  title,
+  domain,
+}: {
+  url: string;
+  title: string;
+  domain: string;
+}) {
+  return (
+    <CreasToggle url={url} title={title} domain={domain} deep={await doneDeep(url)} />
+  );
+}
+
+/**
  * Ligne produit, en deux niveaux : le titre et le prix sur la première ligne,
  * le contexte sur la seconde. Cette forme tient en demi-largeur, ce qui permet
  * de poser deux cartes côte à côte plutôt que de les empiler.
@@ -234,7 +252,7 @@ function ProductRow({
           ) : null}
           {status ? <> · {status}</> : null}
         </p>
-        <CreasToggle url={r.url} title={r.title} domain={domain} />
+        <RowCreas url={r.url} title={r.title} domain={domain} />
       </div>
     </li>
   );
@@ -328,7 +346,7 @@ function ClimbRow({ c }: { c: Climb }) {
             </>
           )}
         </p>
-        {c.url && <CreasToggle url={c.url} title={c.title} domain={c.domain} />}
+        {c.url && <RowCreas url={c.url} title={c.title} domain={c.domain} />}
       </div>
     </li>
   );
