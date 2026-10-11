@@ -8,6 +8,7 @@ import {
   type AdCrea,
   type AdProduct,
 } from "@/lib/radar-ads";
+import { loadDemand, type DemandVideo } from "@/lib/radar-demand";
 
 // Les pubs arrivent pendant qu'une veille tourne : la page doit les montrer
 // dès qu'elles sont déposées.
@@ -120,8 +121,104 @@ function Product({ p }: { p: AdProduct }) {
   );
 }
 
+/** Une demande nette : assez de questions pour ne pas tenir à une seule cliente. */
+const STRONG_ASKS = 8;
+
+function Demand({ v }: { v: DemandVideo }) {
+  const strong = v.asks >= STRONG_ASKS;
+  const first = v.history[0];
+  const grown = v.history.length > 1 && first ? v.asks - first.asks : 0;
+  return (
+    <li className="px-4 sm:px-5 py-4 flex gap-3 sm:gap-4">
+      <a
+        href={v.videoUrl}
+        {...outside}
+        className="block w-16 sm:w-20 shrink-0 self-start aspect-[3/4] rounded-lg overflow-hidden bg-slate-100 ring-1 ring-slate-200 hover:ring-indigo-400"
+      >
+        {v.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={v.image} alt={v.creator} loading="lazy" className="w-full h-full object-cover" />
+        ) : null}
+      </a>
+      <div className="min-w-0 flex-1 space-y-2">
+        <div>
+          <a
+            href={v.videoUrl}
+            {...outside}
+            className="text-sm font-semibold text-slate-900 hover:text-indigo-600 hover:underline"
+          >
+            ▶ {v.creator}
+          </a>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {[
+              v.kind,
+              v.postedAt ? `en ligne depuis le ${day(v.postedAt)}` : null,
+              v.plays != null ? `${count(v.plays)} vues` : null,
+              v.likes != null ? `${count(v.likes)} likes` : null,
+              v.comments != null ? `${count(v.comments)} commentaires` : null,
+              v.saves != null ? `${count(v.saves)} enregistrements` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        </div>
+        <p className="flex flex-wrap items-center gap-1.5 text-xs">
+          <span
+            className={`rounded-full px-2 py-0.5 font-medium ${
+              strong ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
+            }`}
+            title={`${v.sampled} commentaires lus sur ${v.comments ?? "?"}`}
+          >
+            {v.asks} demande{v.asks > 1 ? "s" : ""} sur {v.sampled} commentaires lus
+          </span>
+          {v.askLikes > 0 && (
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">
+              {count(v.askLikes)} likes sur ces demandes
+            </span>
+          )}
+          {v.wants > 0 && (
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">
+              {v.wants} « il me la faut »
+            </span>
+          )}
+          {v.dance && (
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">danse / trend</span>
+          )}
+          {grown > 0 && first && (
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">
+              +{grown} depuis le {day(first.day)}
+            </span>
+          )}
+        </p>
+        {v.caption && <p className="text-xs text-slate-600 leading-snug line-clamp-2">{v.caption}</p>}
+        {v.quotes.length > 0 && (
+          <ul className="space-y-1 rounded-lg bg-slate-50 px-3 py-2.5 text-xs text-slate-600">
+            {v.quotes.map((q, i) => (
+              <li key={i} className="flex items-baseline justify-between gap-3">
+                <span className="min-w-0 break-words">« {q.t} »</span>
+                {q.l > 0 && (
+                  <span className="shrink-0 tabular-nums text-slate-400">{count(q.l)} ♥</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {v.creatorNote && (
+          <p className="text-xs text-amber-600 leading-snug line-clamp-2">
+            Réponse de la créatrice : {v.creatorNote}
+          </p>
+        )}
+      </div>
+    </li>
+  );
+}
+
 export default async function RadarTiktokPage() {
-  const [products, sessions] = await Promise.all([loadAds(), loadSessions()]);
+  const [products, sessions, demand] = await Promise.all([
+    loadAds(),
+    loadSessions(),
+    loadDemand(),
+  ]);
   const creas = products.reduce((n, p) => n + p.creas.length, 0);
   const running = products.filter((p) => p.runningDays >= RUNNING_DAYS).length;
   const shops = new Set(products.map((p) => p.domain)).size;
@@ -181,6 +278,27 @@ export default async function RadarTiktokPage() {
         )}
       </Card>
 
+      <Card className="overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200">
+          <h2 className="text-sm font-semibold text-slate-900">Demande dans les commentaires</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Des vidéos de tenues, hors pub, où l&apos;on demande d&apos;où vient la pièce — celles
+            qui reçoivent le plus de demandes d&apos;abord
+          </p>
+        </div>
+        {demand.length === 0 ? (
+          <p className="px-5 py-10 text-sm text-slate-400 text-center">
+            Aucune demande relevée pour l&apos;instant. Elle se relève avec la veille.
+          </p>
+        ) : (
+          <ul className="divide-y divide-slate-200">
+            {demand.map((v) => (
+              <Demand key={v.id} v={v} />
+            ))}
+          </ul>
+        )}
+      </Card>
+
       {done.length > 0 && (
         <Card className="overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-200">
@@ -214,6 +332,18 @@ export default async function RadarTiktokPage() {
           ajoute le produit au panier et quitte la page — sans jamais aller au paiement — pour que
           TikTok serve davantage de pubs de ce type.
         </p>
+        <details className="mt-1.5">
+          <summary className="cursor-pointer hover:text-slate-600 transition-colors">
+            Comment lire « demandes »
+          </summary>
+          <p className="mt-1.5">
+            Claude cherche des vidéos de tenues de moins de deux mois et lit jusqu&apos;à 150
+            commentaires de chacune. Une demande est un commentaire qui pose la question : « elle
+            vient d&apos;où la robe ? », « la ref svp », « le haut ?? ». TikTok ne sert qu&apos;une
+            partie des commentaires, le compte est donc un minimum. Le relevé lit le texte, pas
+            l&apos;image : « danse / trend » vient de la légende et du son.
+          </p>
+        </details>
         <details className="mt-1.5">
           <summary className="cursor-pointer hover:text-slate-600 transition-colors">
             Comment lire « tourne depuis »

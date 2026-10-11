@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "./prisma";
 
 /**
@@ -18,6 +19,9 @@ export type DeepPick = {
   views: number | null;
   /** "AAAA-MM-JJ" */
   date: string | null;
+  /** Ce qu'est la vidéo pour ce produit, en quelques mots : « Créa confirmée
+   *  de la boutique », « Vidéo proche »… Absent des recherches anciennes. */
+  label?: string | null;
   /** Pourquoi elle est retenue, et quoi en reprendre. */
   why: string;
 };
@@ -32,6 +36,7 @@ export type Deep = {
 };
 
 type DeepRow = {
+  url?: string;
   status: string;
   requestedAt: string;
   doneAt: string | null;
@@ -87,6 +92,36 @@ export async function loadDeep(url: string): Promise<Deep | null> {
   } catch {
     return null;
   }
+}
+
+/** La même adresse, écrite comme elle l'est dans la table (voir productUrl
+ *  dans radar-creas-actions.ts). */
+function deepKey(url: string): string {
+  try {
+    return new URL(url).toString();
+  } catch {
+    return url;
+  }
+}
+
+/** Toutes les recherches traitées, lues une fois par affichage : la page
+ *  liste des dizaines de produits, pas question d'une requête par ligne. */
+const loadDoneDeeps = cache(async (): Promise<Map<string, Deep>> => {
+  try {
+    await ensureTable();
+    const rows = await prisma.$queryRawUnsafe<DeepRow[]>(
+      `SELECT "url","status","requestedAt","doneAt","payload" FROM "RadarCreaSearch" WHERE "payload" IS NOT NULL`,
+    );
+    return new Map(rows.map((r) => [r.url ?? "", toDeep(r)]));
+  } catch {
+    return new Map();
+  }
+});
+
+/** La recherche déjà traitée de ce produit, ou null. Ne lève pas. */
+export async function doneDeep(url: string): Promise<Deep | null> {
+  const deep = (await loadDoneDeeps()).get(deepKey(url));
+  return deep && deep.picks.length > 0 ? deep : null;
 }
 
 /** Enregistre (ou relance) la demande. Un résultat déjà obtenu reste affiché
