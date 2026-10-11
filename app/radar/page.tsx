@@ -8,6 +8,8 @@ import { addRadarSite, removeRadarSite } from "@/lib/radar-actions";
 import { CreasToggle, CreasView } from "@/app/components/RadarCreas";
 import { findCreas } from "@/lib/radar-creas";
 import { loadDeep } from "@/lib/radar-deep";
+import { RadarAdsWatch } from "@/app/components/RadarAdsWatch";
+import { SESSION_MINUTES, loadSessions } from "@/lib/radar-ads";
 import {
   isRealClimb,
   loadTrends,
@@ -433,6 +435,7 @@ export default async function RadarPage() {
   const tracked = await prisma.radarSite
     .findMany({ orderBy: { domain: "asc" } })
     .catch(() => [] as { domain: string }[]);
+  const [adSession = null] = await loadSessions(1);
   const scannedDomains = new Set(radar.sites.map((s) => s.domain));
   // Un site ajoute apres le dernier scan n'a pas encore de donnees.
   const pending = tracked
@@ -513,6 +516,15 @@ export default async function RadarPage() {
             className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-white px-4 py-2.5 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-50"
           >
             Scan exclusif Avontti →
+          </Link>
+          {/* La veille des pubs passe par Chrome et le compte TikTok : le
+              bouton la demande, ses résultats ont leur propre page. */}
+          <RadarAdsWatch initial={adSession} minutes={SESSION_MINUTES} />
+          <Link
+            href="/radar/tiktok"
+            className="text-center text-xs font-medium text-slate-500 hover:text-indigo-600"
+          >
+            Voir les pubs TikTok repérées →
           </Link>
         </div>
       </div>
