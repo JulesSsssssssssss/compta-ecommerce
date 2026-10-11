@@ -55,7 +55,7 @@ export function DeepPicks({ deep, compact = false }: { deep: Deep; compact?: boo
       <table className="w-full text-xs">
         <thead>
           <tr className="text-slate-400">
-            <th className="w-6" />
+            <th />
             <th className="py-0.5 text-left font-normal">Vidéo</th>
             <th className={`${num} font-normal`}>Vues</th>
             <th className={`${num} font-normal`}>Likes</th>
@@ -65,7 +65,7 @@ export function DeepPicks({ deep, compact = false }: { deep: Deep; compact?: boo
         {deep.picks.map((p, i) => (
           <tbody key={p.url} className="align-top">
             <tr>
-              <td className="py-0.5 text-slate-400 tabular-nums">{i + 1}</td>
+              <td className="py-0.5 pr-2 text-slate-400 tabular-nums">{i + 1}</td>
               <td className="py-0.5 max-w-0 w-full truncate">
                 <a href={p.url} {...outside} className={`${link} font-medium`}>
                   {p.creator}
